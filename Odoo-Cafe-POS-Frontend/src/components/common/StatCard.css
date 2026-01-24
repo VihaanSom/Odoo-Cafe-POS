@@ -1,0 +1,69 @@
+/* ============================================
+   StatCard Component Styles
+   ============================================ */
+
+.stat-card {
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-card);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.stat-card__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-color);
+    color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+.stat-card--success .stat-card__icon {
+    background: #DCFCE7;
+    color: #16A34A;
+}
+
+.stat-card--warning .stat-card__icon {
+    background: #FEF3C7;
+    color: #D97706;
+}
+
+.stat-card--info .stat-card__icon {
+    background: #DBEAFE;
+    color: #2563EB;
+}
+
+.stat-card__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.stat-card__title {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.stat-card__value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.stat-card__subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
