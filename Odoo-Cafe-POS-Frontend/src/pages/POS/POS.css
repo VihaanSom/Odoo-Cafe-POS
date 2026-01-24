@@ -128,6 +128,12 @@
     border-color: var(--primary-color);
 }
 
+.floor-tabs__item--active:hover {
+    background: var(--primary-hover);
+    color: white;
+    border-color: var(--primary-hover);
+}
+
 /* Table Grid */
 .table-grid {
     display: grid;
