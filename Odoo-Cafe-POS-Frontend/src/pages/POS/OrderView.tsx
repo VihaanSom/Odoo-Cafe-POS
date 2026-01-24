@@ -4,8 +4,8 @@ import { ArrowLeft } from 'lucide-react';
 import { OrderProvider, useOrder } from '../../store/order.store';
 import ProductCard from '../../components/orders/ProductCard';
 import OrderSummary from '../../components/orders/OrderSummary';
-import { getCategories, getProductsByCategory, type Category, type Product } from '../../api/products.api';
-import { getTableById } from '../../api/tables.api';
+import { getCategories, getProductsBackendApi, type Category, type Product } from '../../api/products.api';
+import { getTableByIdBackendApi } from '../../api/tables.api';
 import './OrderView.css';
 
 // Inner component that uses the order context
@@ -18,6 +18,7 @@ const OrderViewContent = () => {
     const [products, setProducts] = useState<(Product & { icon?: string })[]>([]);
     const [activeCategoryId, setActiveCategoryId] = useState<string>('');
     const [tableName, setTableName] = useState<string>('');
+    const [tableBranchId, setTableBranchId] = useState<string>('');
     const [isLoading, setIsLoading] = useState(true);
 
     // Load categories on mount
@@ -32,32 +33,35 @@ const OrderViewContent = () => {
         loadCategories();
     }, []);
 
-    // Load table info
+    // Load table info from backend
     useEffect(() => {
         if (tableId) {
             setTableId(tableId);
             const loadTable = async () => {
-                const table = await getTableById(tableId);
+                const table = await getTableByIdBackendApi(tableId);
                 if (table) {
                     setTableName(table.tableNumber);
+                    // Store branchId for order creation
+                    if (table.branchId) {
+                        setTableBranchId(table.branchId);
+                    }
                 }
             };
             loadTable();
         }
     }, [tableId, setTableId]);
 
-    // Load products when category changes
+    // Load products from backend (all products - categories still mock)
     useEffect(() => {
-        if (!activeCategoryId) return;
-
         const loadProducts = async () => {
             setIsLoading(true);
-            const productsData = await getProductsByCategory(activeCategoryId);
+            // Get all products from backend (ignore category filtering since categories are mock)
+            const productsData = await getProductsBackendApi();
             setProducts(productsData as (Product & { icon?: string })[]);
             setIsLoading(false);
         };
         loadProducts();
-    }, [activeCategoryId]);
+    }, []);
 
     const handleProductClick = (product: Product) => {
         addToCart({
@@ -124,7 +128,7 @@ const OrderViewContent = () => {
             </section>
 
             {/* Right Column - Order Summary */}
-            <OrderSummary tableNumber={tableName || 'Table'} />
+            <OrderSummary tableNumber={tableName || 'Table'} tableId={tableId || ''} branchId={tableBranchId} />
         </div>
     );
 };

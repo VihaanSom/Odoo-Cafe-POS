@@ -1,12 +1,21 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, CreditCard, ClipboardList } from 'lucide-react';
 import { useOrder } from '../../store/order.store';
+import { useSession } from '../../store/session.store';
+import {
+    createOrderBackendApi,
+    sendToKitchenBackendApi,
+    type CreateOrderBackendRequest
+} from '../../api/orders.api';
 
 interface OrderSummaryProps {
     tableNumber: string;
+    tableId: string;
+    branchId?: string;
 }
 
-const OrderSummary = ({ tableNumber }: OrderSummaryProps) => {
+const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: OrderSummaryProps) => {
     const {
         cart,
         orderNumber,
@@ -18,6 +27,10 @@ const OrderSummary = ({ tableNumber }: OrderSummaryProps) => {
         clearCart,
     } = useOrder();
 
+    const { session } = useSession();
+    const [isLoading, setIsLoading] = useState(false);
+    const [orderError, setOrderError] = useState<string | null>(null);
+
     const formatPrice = (price: number) => {
         return `₹${price.toFixed(2)}`;
     };
@@ -27,9 +40,63 @@ const OrderSummary = ({ tableNumber }: OrderSummaryProps) => {
         // In a real app, this would navigate to payment screen
     };
 
-    const handlePlaceOrder = () => {
-        alert(`Order placed for ${tableNumber}! You can continue adding items.`);
-        // In a real app, this would send order to kitchen
+    const handlePlaceOrder = async () => {
+        if (!session) {
+            setOrderError('No active session. Please start a session first.');
+            return;
+        }
+
+        if (!branchId) {
+            setOrderError('Branch information not loaded. Please refresh the page.');
+            return;
+        }
+
+        if (cart.length === 0) {
+            return;
+        }
+
+        setIsLoading(true);
+        setOrderError(null);
+
+        try {
+            // Create order with items
+            const orderData: CreateOrderBackendRequest = {
+                branchId: branchId,
+                sessionId: session.id,
+                orderType: 'DINE_IN',
+                tableId: tableId,
+                items: cart.map(item => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                })),
+            };
+
+            const createResult = await createOrderBackendApi(orderData);
+
+            if (!createResult.success || !createResult.order) {
+                setOrderError(createResult.error || 'Failed to create order');
+                setIsLoading(false);
+                return;
+            }
+
+            // Send to kitchen
+            const kitchenResult = await sendToKitchenBackendApi(createResult.order.id);
+
+            if (!kitchenResult.success) {
+                setOrderError(kitchenResult.error || 'Failed to send to kitchen');
+                setIsLoading(false);
+                return;
+            }
+
+            // Success - clear cart
+            clearCart();
+            alert(`Order ${createResult.order.id} sent to kitchen!`);
+        } catch (error) {
+            console.error('Place order error:', error);
+            setOrderError('Network error. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const MAX_QUANTITY = 99;
@@ -115,13 +182,26 @@ const OrderSummary = ({ tableNumber }: OrderSummaryProps) => {
                     </div>
                 </div>
 
+                {orderError && (
+                    <div className="order-summary__error" style={{
+                        color: '#DC2626',
+                        background: '#FEE2E2',
+                        padding: '0.5rem',
+                        borderRadius: '8px',
+                        marginBottom: '0.5rem',
+                        fontSize: '0.85rem'
+                    }}>
+                        {orderError}
+                    </div>
+                )}
+
                 <button
                     className="order-summary__place-btn"
-                    disabled={cart.length === 0}
+                    disabled={cart.length === 0 || isLoading}
                     onClick={handlePlaceOrder}
                 >
                     <ClipboardList size={20} />
-                    Place Order
+                    {isLoading ? 'Placing...' : 'Place Order'}
                 </button>
 
                 <button

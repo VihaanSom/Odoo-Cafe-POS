@@ -221,3 +221,92 @@ export const deleteProducts = async (productIds: string[]): Promise<number> => {
         }, 200);
     });
 };
+
+// ============================================
+// REAL BACKEND API FUNCTIONS
+// ============================================
+
+const API_BASE_URL = 'http://localhost:5000/api';
+
+const getAuthHeaders = (): HeadersInit => {
+    const token = localStorage.getItem('pos_auth_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
+
+/**
+ * Backend Product interface
+ */
+interface BackendProduct {
+    id: string;
+    name: string;
+    price: string | number;
+    cost?: string | number;
+    categoryId?: string;
+    description?: string;
+    barcode?: string;
+    isActive?: boolean;
+    category?: {
+        id: string;
+        name: string;
+    };
+}
+
+/**
+ * Map backend product to frontend Product interface
+ */
+const mapBackendProduct = (p: BackendProduct): Product => ({
+    id: p.id,
+    name: p.name,
+    price: Number(p.price),
+    cost: p.cost ? Number(p.cost) : undefined,
+    categoryId: p.categoryId || p.category?.id || 'cat-1',
+    description: p.description,
+    barcode: p.barcode,
+    taxes: 'gst_5',
+    priceRules: [{ minQty: 1, price: Number(p.price) }],
+    status: p.isActive !== false ? 'active' : 'archived',
+    isActive: p.isActive !== false,
+});
+
+/**
+ * Get all products from backend
+ * GET /api/products
+ */
+export const getProductsBackendApi = async (): Promise<Product[]> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/products`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch products');
+            return [];
+        }
+
+        const data = await response.json();
+        // Backend might return array directly or { products: [] }
+        const productsData: BackendProduct[] = Array.isArray(data) ? data : (data.products || []);
+
+        return productsData.map(mapBackendProduct);
+    } catch (error) {
+        console.error('Get products error:', error);
+        return [];
+    }
+};
+
+/**
+ * Get products by category from backend (filter locally)
+ * GET /api/products then filter by categoryId
+ */
+export const getProductsByCategoryBackendApi = async (categoryId: string): Promise<Product[]> => {
+    const allProducts = await getProductsBackendApi();
+    // If categoryId looks like a mock ID (cat-1, cat-2, etc.), return all products
+    if (categoryId.startsWith('cat-')) {
+        return allProducts;
+    }
+    return allProducts.filter(p => p.categoryId === categoryId);
+};
