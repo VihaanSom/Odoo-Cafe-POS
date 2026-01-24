@@ -9,7 +9,7 @@ const Signup = () => {
     const navigate = useNavigate();
     const { signup } = useAuth();
 
-    const [restaurantName, setRestaurantName] = useState('');
+
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -23,7 +23,7 @@ const Signup = () => {
 
         try {
             const response = await signup({
-                restaurantName,
+                restaurantName: 'Odoo Cafe',
                 fullName,
                 email,
                 password,
@@ -70,20 +70,7 @@ const Signup = () => {
                 <form className="auth-form" onSubmit={handleSubmit}>
                     {error && <div className="auth-form__error">{error}</div>}
 
-                    <div className="auth-form__group">
-                        <label htmlFor="restaurantName" className="auth-form__label">
-                            Restaurant Name
-                        </label>
-                        <input
-                            type="text"
-                            id="restaurantName"
-                            className="auth-form__input"
-                            placeholder="My Restaurant"
-                            value={restaurantName}
-                            onChange={(e) => setRestaurantName(e.target.value)}
-                            required
-                        />
-                    </div>
+
 
                     <div className="auth-form__group">
                         <label htmlFor="fullName" className="auth-form__label">
