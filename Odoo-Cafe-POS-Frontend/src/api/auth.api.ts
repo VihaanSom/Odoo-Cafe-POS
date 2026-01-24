@@ -20,7 +20,8 @@ export interface SignupCredentials {
 export interface User {
     id: string;
     email: string;
-    name: string;
+    fullName: string;
+    restaurantName?: string;
     createdAt?: string;
 }
 
@@ -105,7 +106,12 @@ export const signupApi = async (credentials: SignupCredentials): Promise<AuthRes
         return {
             success: true,
             token: data.token,
-            user: data.user,
+            user: {
+                id: data.user.id,
+                email: data.user.email,
+                fullName: data.user.name,
+                restaurantName: credentials.restaurantName || 'Odoo Cafe',
+            },
         };
     } catch (error) {
         console.error('Signup API error:', error);
