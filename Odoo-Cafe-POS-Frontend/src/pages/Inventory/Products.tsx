@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Edit2, Trash2, X, Package } from 'lucide-react';
 import AdminPageLayout from '../../components/admin/AdminPageLayout';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 interface Product {
     id: string;
@@ -58,6 +59,10 @@ const Products = () => {
         barcode: '',
     });
 
+    // Confirm dialog state
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+
     const getCategoryName = (categoryId: string) => {
         return mockCategories.find(c => c.id === categoryId)?.name || 'Unknown';
     };
@@ -85,9 +90,15 @@ const Products = () => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (productId: string) => {
-        if (confirm('Are you sure you want to delete this product?')) {
-            setProducts(products.filter(p => p.id !== productId));
+    const handleDeleteClick = (productId: string) => {
+        setDeleteId(productId);
+        setConfirmOpen(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (deleteId) {
+            setProducts(products.filter(p => p.id !== deleteId));
+            setDeleteId(null);
         }
     };
 
@@ -181,7 +192,7 @@ const Products = () => {
                                             </button>
                                             <button
                                                 className="admin-table__action-btn admin-table__action-btn--danger"
-                                                onClick={() => handleDelete(product.id)}
+                                                onClick={() => handleDeleteClick(product.id)}
                                                 title="Delete"
                                             >
                                                 <Trash2 size={16} />
@@ -302,6 +313,18 @@ const Products = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleDeleteConfirm}
+                type="delete"
+                title="Delete Product"
+                message="Are you sure you want to delete this product? This action cannot be undone."
+                confirmLabel="Delete"
+                cancelLabel="Cancel"
+            />
         </AdminPageLayout>
     );
 };

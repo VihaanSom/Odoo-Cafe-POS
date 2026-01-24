@@ -1,6 +1,6 @@
 /**
  * Payments Management Page
- * View all payment transactions
+ * View all payment transactions with filter by payment method
  */
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -18,6 +18,8 @@ interface Payment {
     createdAt: string;
 }
 
+type FilterType = 'ALL' | 'CASH' | 'UPI' | 'CARD';
+
 // Mock data
 const mockPayments: Payment[] = [
     { id: 'pay-1', orderId: 'order-1001', orderNumber: '#1001', method: 'UPI', amount: 1188.60, transactionRef: 'UPI-78945612', status: 'COMPLETED', createdAt: '2026-01-24T20:32:00' },
@@ -31,12 +33,21 @@ const mockPayments: Payment[] = [
 const Payments = () => {
     const [payments] = useState<Payment[]>(mockPayments);
     const [searchQuery, setSearchQuery] = useState('');
+    const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
 
-    const filteredPayments = payments.filter(payment =>
-        payment.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        payment.transactionRef?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        payment.method.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Apply filter and search
+    const filteredPayments = payments.filter(payment => {
+        // First apply method filter
+        if (activeFilter !== 'ALL' && payment.method !== activeFilter) {
+            return false;
+        }
+        // Then apply search
+        return (
+            payment.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            payment.transactionRef?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            payment.method.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    });
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-IN', {
@@ -86,25 +97,45 @@ const Payments = () => {
             onSearchChange={setSearchQuery}
             showNewButton={false}
         >
-            {/* Summary Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-                <div style={{ background: 'white', padding: '1.25rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                    <p style={{ color: '#6B7280', fontSize: '0.85rem', margin: 0 }}>Total Collections</p>
-                    <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.25rem 0 0', color: '#111827' }}>₹{totalAmount.toFixed(2)}</p>
-                </div>
-                <div style={{ background: 'white', padding: '1.25rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                    <p style={{ color: '#6B7280', fontSize: '0.85rem', margin: 0 }}>💵 Cash</p>
-                    <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.25rem 0 0', color: '#16A34A' }}>₹{cashTotal.toFixed(2)}</p>
-                </div>
-                <div style={{ background: 'white', padding: '1.25rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                    <p style={{ color: '#6B7280', fontSize: '0.85rem', margin: 0 }}>📱 UPI</p>
-                    <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.25rem 0 0', color: '#2563EB' }}>₹{upiTotal.toFixed(2)}</p>
-                </div>
-                <div style={{ background: 'white', padding: '1.25rem', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                    <p style={{ color: '#6B7280', fontSize: '0.85rem', margin: 0 }}>💳 Card</p>
-                    <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.25rem 0 0', color: '#CA8A04' }}>₹{cardTotal.toFixed(2)}</p>
-                </div>
+            {/* Summary Cards - Clickable Filters */}
+            <div className="payment-cards">
+                <button
+                    className={`payment-card ${activeFilter === 'ALL' ? 'payment-card--active' : ''}`}
+                    onClick={() => setActiveFilter('ALL')}
+                >
+                    <p className="payment-card__label">Total Collections</p>
+                    <p className="payment-card__amount">₹{totalAmount.toFixed(2)}</p>
+                </button>
+                <button
+                    className={`payment-card ${activeFilter === 'CASH' ? 'payment-card--active' : ''}`}
+                    onClick={() => setActiveFilter('CASH')}
+                >
+                    <p className="payment-card__label">💵 Cash</p>
+                    <p className="payment-card__amount payment-card__amount--cash">₹{cashTotal.toFixed(2)}</p>
+                </button>
+                <button
+                    className={`payment-card ${activeFilter === 'UPI' ? 'payment-card--active' : ''}`}
+                    onClick={() => setActiveFilter('UPI')}
+                >
+                    <p className="payment-card__label">📱 UPI</p>
+                    <p className="payment-card__amount payment-card__amount--upi">₹{upiTotal.toFixed(2)}</p>
+                </button>
+                <button
+                    className={`payment-card ${activeFilter === 'CARD' ? 'payment-card--active' : ''}`}
+                    onClick={() => setActiveFilter('CARD')}
+                >
+                    <p className="payment-card__label">💳 Card</p>
+                    <p className="payment-card__amount payment-card__amount--card">₹{cardTotal.toFixed(2)}</p>
+                </button>
             </div>
+
+            {/* Active Filter Indicator */}
+            {activeFilter !== 'ALL' && (
+                <div className="payment-filter-indicator">
+                    Showing: <strong>{activeFilter}</strong> payments
+                    <button onClick={() => setActiveFilter('ALL')}>Clear filter</button>
+                </div>
+            )}
 
             <div className="admin-table">
                 <table>
@@ -158,6 +189,90 @@ const Payments = () => {
                     </tbody>
                 </table>
             </div>
+
+            <style>{`
+                .payment-cards {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                    gap: 1rem;
+                    margin-bottom: 1.5rem;
+                }
+
+                .payment-card {
+                    background: white;
+                    padding: 1.25rem;
+                    border-radius: 12px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    border: 2px solid transparent;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    text-align: left;
+                }
+
+                .payment-card:hover {
+                    border-color: var(--primary-color);
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                }
+
+                .payment-card--active {
+                    border-color: var(--primary-color);
+                    background: #E0F2F1;
+                }
+
+                .payment-card__label {
+                    color: #6B7280;
+                    font-size: 0.85rem;
+                    margin: 0;
+                }
+
+                .payment-card__amount {
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    margin: 0.25rem 0 0;
+                    color: #111827;
+                }
+
+                .payment-card__amount--cash {
+                    color: #16A34A;
+                }
+
+                .payment-card__amount--upi {
+                    color: #2563EB;
+                }
+
+                .payment-card__amount--card {
+                    color: #CA8A04;
+                }
+
+                .payment-filter-indicator {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 0.5rem 1rem;
+                    background: #E0F2F1;
+                    border-radius: 8px;
+                    margin-bottom: 1rem;
+                    font-size: 0.9rem;
+                    color: #00695C;
+                }
+
+                .payment-filter-indicator button {
+                    margin-left: auto;
+                    padding: 0.25rem 0.75rem;
+                    border-radius: 6px;
+                    border: 1px solid #00897B;
+                    background: transparent;
+                    color: #00897B;
+                    font-size: 0.8rem;
+                    cursor: pointer;
+                }
+
+                .payment-filter-indicator button:hover {
+                    background: #00897B;
+                    color: white;
+                }
+            `}</style>
         </AdminPageLayout>
     );
 };

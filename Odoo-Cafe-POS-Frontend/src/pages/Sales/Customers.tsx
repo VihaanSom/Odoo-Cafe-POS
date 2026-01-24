@@ -6,24 +6,24 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Edit2, Trash2, X, Users } from 'lucide-react';
 import AdminPageLayout from '../../components/admin/AdminPageLayout';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 interface Customer {
     id: string;
     name: string;
     phone: string;
-    email?: string;
-    points: number;
-    totalOrders: number;
+    email: string;
+    totalSales: number;
     createdAt: string;
 }
 
 // Mock data
 const mockCustomers: Customer[] = [
-    { id: 'cust-1', name: 'Rahul Sharma', phone: '+91 98765 43210', email: 'rahul@email.com', points: 250, totalOrders: 12, createdAt: '2026-01-15' },
-    { id: 'cust-2', name: 'Priya Patel', phone: '+91 87654 32109', email: 'priya.p@email.com', points: 480, totalOrders: 24, createdAt: '2026-01-10' },
-    { id: 'cust-3', name: 'Amit Kumar', phone: '+91 76543 21098', points: 120, totalOrders: 6, createdAt: '2026-01-20' },
-    { id: 'cust-4', name: 'Sneha Reddy', phone: '+91 65432 10987', email: 'sneha.r@email.com', points: 890, totalOrders: 45, createdAt: '2025-12-05' },
-    { id: 'cust-5', name: 'Vikram Singh', phone: '+91 54321 09876', points: 50, totalOrders: 2, createdAt: '2026-01-22' },
+    { id: 'cust-1', name: 'Rahul Sharma', phone: '+91 98765 43210', email: 'rahul@email.com', totalSales: 4520, createdAt: '2026-01-15' },
+    { id: 'cust-2', name: 'Priya Patel', phone: '+91 87654 32109', email: 'priya.p@email.com', totalSales: 8960, createdAt: '2026-01-10' },
+    { id: 'cust-3', name: 'Amit Kumar', phone: '+91 76543 21098', email: 'amit.k@email.com', totalSales: 1250, createdAt: '2026-01-20' },
+    { id: 'cust-4', name: 'Sneha Reddy', phone: '+91 65432 10987', email: 'sneha.r@email.com', totalSales: 15800, createdAt: '2025-12-05' },
+    { id: 'cust-5', name: 'Vikram Singh', phone: '+91 54321 09876', email: 'vikram.s@email.com', totalSales: 350, createdAt: '2026-01-22' },
 ];
 
 const Customers = () => {
@@ -32,6 +32,10 @@ const Customers = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
     const [formData, setFormData] = useState({ name: '', phone: '', email: '' });
+
+    // Confirm dialog state
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
 
     const filteredCustomers = customers.filter(customer =>
         customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -55,9 +59,15 @@ const Customers = () => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (customerId: string) => {
-        if (confirm('Are you sure you want to delete this customer?')) {
-            setCustomers(customers.filter(c => c.id !== customerId));
+    const handleDeleteClick = (customerId: string) => {
+        setDeleteId(customerId);
+        setConfirmOpen(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (deleteId) {
+            setCustomers(customers.filter(c => c.id !== deleteId));
+            setDeleteId(null);
         }
     };
 
@@ -67,7 +77,7 @@ const Customers = () => {
         if (editingCustomer) {
             setCustomers(customers.map(c =>
                 c.id === editingCustomer.id
-                    ? { ...c, name: formData.name, phone: formData.phone, email: formData.email || undefined }
+                    ? { ...c, name: formData.name, phone: formData.phone, email: formData.email }
                     : c
             ));
         } else {
@@ -75,9 +85,8 @@ const Customers = () => {
                 id: `cust-${Date.now()}`,
                 name: formData.name,
                 phone: formData.phone,
-                email: formData.email || undefined,
-                points: 0,
-                totalOrders: 0,
+                email: formData.email,
+                totalSales: 0,
                 createdAt: new Date().toISOString().split('T')[0],
             };
             setCustomers([...customers, newCustomer]);
@@ -101,15 +110,14 @@ const Customers = () => {
                             <th>Name</th>
                             <th>Phone</th>
                             <th>Email</th>
-                            <th>Points</th>
-                            <th>Orders</th>
+                            <th>Total Sales</th>
                             <th style={{ width: '100px' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredCustomers.length === 0 ? (
                             <tr>
-                                <td colSpan={6}>
+                                <td colSpan={5}>
                                     <div className="admin-empty">
                                         <div className="admin-empty__icon"><Users size={48} /></div>
                                         <p className="admin-empty__text">No customers found</p>
@@ -126,13 +134,8 @@ const Customers = () => {
                                 >
                                     <td><strong>{customer.name}</strong></td>
                                     <td>{customer.phone}</td>
-                                    <td>{customer.email || '-'}</td>
-                                    <td>
-                                        <span className="admin-badge admin-badge--success">
-                                            {customer.points} pts
-                                        </span>
-                                    </td>
-                                    <td>{customer.totalOrders}</td>
+                                    <td>{customer.email}</td>
+                                    <td><strong>₹{customer.totalSales.toLocaleString()}</strong></td>
                                     <td>
                                         <div className="admin-table__actions">
                                             <button
@@ -144,7 +147,7 @@ const Customers = () => {
                                             </button>
                                             <button
                                                 className="admin-table__action-btn admin-table__action-btn--danger"
-                                                onClick={() => handleDelete(customer.id)}
+                                                onClick={() => handleDeleteClick(customer.id)}
                                                 title="Delete"
                                             >
                                                 <Trash2 size={16} />
@@ -211,13 +214,14 @@ const Customers = () => {
                                     </div>
 
                                     <div className="admin-form__group">
-                                        <label className="admin-form__label">Email (Optional)</label>
+                                        <label className="admin-form__label">Email</label>
                                         <input
                                             type="email"
                                             className="admin-form__input"
                                             value={formData.email}
                                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                             placeholder="email@example.com"
+                                            required
                                         />
                                     </div>
                                 </div>
@@ -239,6 +243,18 @@ const Customers = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Delete Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleDeleteConfirm}
+                type="delete"
+                title="Delete Customer"
+                message="Are you sure you want to delete this customer? This action cannot be undone."
+                confirmLabel="Delete"
+                cancelLabel="Cancel"
+            />
         </AdminPageLayout>
     );
 };
