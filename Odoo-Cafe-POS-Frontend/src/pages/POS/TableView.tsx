@@ -102,9 +102,9 @@ const TableView = () => {
                     <div className="pos-header__actions">
                         <div className="pos-user">
                             <div className="pos-user__avatar">
-                                {user?.name ? getInitials(user.name) : 'U'}
+                                {user?.fullName ? getInitials(user.fullName) : 'U'}
                             </div>
-                            <span className="pos-user__name">{user?.name || 'User'}</span>
+                            <span className="pos-user__name">{user?.fullName || 'User'}</span>
                         </div>
                     </div>
                 </header>
