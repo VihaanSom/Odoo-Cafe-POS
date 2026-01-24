@@ -347,9 +347,10 @@
 .admin-form__select {
     width: 100%;
     padding: 0.75rem 1rem;
-    border: 1px solid var(--border-light);
+    border: 1.5px solid #CBD5E1;
     border-radius: 8px;
     font-size: 0.95rem;
+    background: #FAFBFC;
     transition: all var(--transition-fast);
 }
 
@@ -357,7 +358,8 @@
 .admin-form__select:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(0, 172, 193, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 172, 193, 0.15);
+    background: white;
 }
 
 .admin-form__row {

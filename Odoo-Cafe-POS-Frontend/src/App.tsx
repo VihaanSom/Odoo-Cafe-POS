@@ -9,6 +9,8 @@ import OrderView from './pages/POS/OrderView';
 
 // Admin Pages
 import Products from './pages/Inventory/Products';
+import ProductList from './pages/Inventory/ProductList';
+import ProductForm from './pages/Inventory/ProductForm';
 import Categories from './pages/Inventory/Categories';
 import Orders from './pages/Sales/Orders';
 import Customers from './pages/Sales/Customers';
@@ -32,7 +34,10 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
 
             {/* Admin/Settings Routes */}
-            <Route path="/dashboard/products" element={<Products />} />
+            <Route path="/dashboard/products" element={<ProductList />} />
+            <Route path="/dashboard/products/new" element={<ProductForm />} />
+            <Route path="/dashboard/products/:productId" element={<ProductForm />} />
+            <Route path="/dashboard/products-old" element={<Products />} />
             <Route path="/dashboard/categories" element={<Categories />} />
             <Route path="/dashboard/orders" element={<Orders />} />
             <Route path="/dashboard/customers" element={<Customers />} />

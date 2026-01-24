@@ -29,7 +29,7 @@ const AdminPageLayout = ({
     newButtonLabel = 'New',
     showSearch = true,
     showNewButton = true,
-    backPath = '/dashboard',
+    backPath = '/dashboard/settings',
 }: AdminPageLayoutProps) => {
     const navigate = useNavigate();
 

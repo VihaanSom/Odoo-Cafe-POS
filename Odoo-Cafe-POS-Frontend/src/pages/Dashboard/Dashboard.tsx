@@ -155,6 +155,14 @@ const Dashboard = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.4 }}
             >
+                {/* Settings Icon - Top Right */}
+                <button
+                    className="terminal-card__settings-btn"
+                    onClick={() => navigate('/dashboard/settings')}
+                >
+                    <Settings size={18} />
+                </button>
+
                 <div className="terminal-card__header">
                     <div className="terminal-card__info">
                         <span className="terminal-card__name">
@@ -163,16 +171,13 @@ const Dashboard = () => {
                                 style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle' }}
                             />
                             Main Terminal
+                            <span
+                                className={`terminal-card__status-dot ${isSessionActive ? 'terminal-card__status-dot--active' : ''}`}
+                                title={isSessionActive ? 'Session Active' : 'No Active Session'}
+                                style={{ marginLeft: '0.5rem', display: 'inline-block', verticalAlign: 'middle' }}
+                            ></span>
                         </span>
                         <span className="terminal-card__id">ID: {CONST_TERMINAL_ID}</span>
-                    </div>
-
-                    <div
-                        className={`terminal-card__status ${isSessionActive ? 'terminal-card__status--open' : 'terminal-card__status--closed'
-                            }`}
-                    >
-                        <span className="terminal-card__status-dot"></span>
-                        {isSessionActive ? 'Session Open' : 'Session Closed'}
                     </div>
                 </div>
 
@@ -246,7 +251,7 @@ const Dashboard = () => {
                     </div>
                     <div className="quick-action__text">
                         <span className="quick-action__title">Settings</span>
-                        <span className="quick-action__subtitle">Configure POS</span>
+                        <span className="quick-action__subtitle">Configure Backend</span>
                     </div>
                 </motion.div>
 

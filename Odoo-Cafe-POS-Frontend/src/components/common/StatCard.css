@@ -11,6 +11,8 @@
     display: flex;
     align-items: flex-start;
     gap: 1rem;
+    min-height: 100px;
+    height: 100%;
 }
 
 .stat-card:hover {
