@@ -2,7 +2,7 @@ const express = require('express');
 const authRoutes = require('./auth.routes');
 
 // Dev A routes (uncomment when ready)
-// const branchRoutes = require('./branch.routes');
+const branchRoutes = require('./branch.routes');
 // const categoryRoutes = require('./category.routes');
 // const productRoutes = require('./product.routes');
 // const floorRoutes = require('./floor.routes');
@@ -21,7 +21,7 @@ const router = express.Router();
 router.use('/auth', authRoutes);
 
 // Dev A: Master Data
-// router.use('/branches', branchRoutes);
+router.use('/branches', branchRoutes);
 // router.use('/categories', categoryRoutes);
 // router.use('/products', productRoutes);
 // router.use('/floors', floorRoutes);
