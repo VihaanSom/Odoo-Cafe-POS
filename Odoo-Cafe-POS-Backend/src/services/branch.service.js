@@ -1,9 +1,27 @@
 const prisma = require('../config/prisma');
+const { MESSAGES } = require('../utils/constants');
+
+/**
+ * Check if branch name already exists
+ */
+const getBranchByName = async (name) => {
+    return prisma.branch.findFirst({
+        where: { name: { equals: name, mode: 'insensitive' } }
+    });
+};
 
 /**
  * Create a new branch
  */
 const createBranch = async ({ name, address }) => {
+    // Check for duplicate name
+    const existing = await getBranchByName(name);
+    if (existing) {
+        const error = new Error('Branch name already exists');
+        error.statusCode = 409;
+        throw error;
+    }
+    
     return prisma.branch.create({
         data: { name, address }
     });

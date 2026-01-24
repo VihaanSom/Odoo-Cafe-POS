@@ -18,6 +18,10 @@ const create = async (req, res, next) => {
         const category = await categoryService.createCategory({ branchId, name });
         res.status(201).json(category);
     } catch (error) {
+        // Handle custom errors with statusCode (404 for branch not found, 409 for duplicate)
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
         // Handle Prisma foreign key error (invalid branchId)
         if (error.code === 'P2003') {
             return res.status(404).json({ message: 'Branch not found' });

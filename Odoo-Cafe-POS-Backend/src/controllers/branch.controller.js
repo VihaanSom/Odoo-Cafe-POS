@@ -15,6 +15,10 @@ const create = async (req, res, next) => {
         const branch = await branchService.createBranch({ name, address });
         res.status(201).json(branch);
     } catch (error) {
+        // Handle custom errors with statusCode
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
         next(error);
     }
 };

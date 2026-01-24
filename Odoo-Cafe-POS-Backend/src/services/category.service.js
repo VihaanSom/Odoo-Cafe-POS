@@ -1,9 +1,45 @@
 const prisma = require('../config/prisma');
 
 /**
+ * Check if category name already exists in a branch
+ */
+const getCategoryByNameInBranch = async (branchId, name) => {
+    return prisma.category.findFirst({
+        where: { 
+            branchId, 
+            name: { equals: name, mode: 'insensitive' } 
+        }
+    });
+};
+
+/**
+ * Check if branch exists
+ */
+const branchExists = async (branchId) => {
+    const branch = await prisma.branch.findUnique({ where: { id: branchId } });
+    return !!branch;
+};
+
+/**
  * Create a new category
  */
 const createCategory = async ({ branchId, name }) => {
+    // Check if branch exists
+    const exists = await branchExists(branchId);
+    if (!exists) {
+        const error = new Error('Branch not found');
+        error.statusCode = 404;
+        throw error;
+    }
+    
+    // Check for duplicate name within branch
+    const existing = await getCategoryByNameInBranch(branchId, name);
+    if (existing) {
+        const error = new Error('Category name already exists in this branch');
+        error.statusCode = 409;
+        throw error;
+    }
+    
     return prisma.category.create({
         data: { branchId, name }
     });
