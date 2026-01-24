@@ -10,12 +10,14 @@ datasource db {
 enum TableStatus {
   FREE
   OCCUPIED
+
   @@map("table_status")
 }
 
 enum OrderType {
   DINE_IN
   TAKEAWAY
+
   @@map("order_type")
 }
 
@@ -24,6 +26,7 @@ enum OrderStatus {
   IN_PROGRESS
   READY
   COMPLETED
+
   @@map("order_status")
 }
 
@@ -31,6 +34,7 @@ enum PaymentMethod {
   CASH
   CARD
   UPI
+
   @@map("payment_method")
 }
 
@@ -38,6 +42,7 @@ enum PaymentStatus {
   PENDING
   COMPLETED
   FAILED
+
   @@map("payment_status")
 }
 
@@ -56,7 +61,7 @@ model User {
 
 model Branch {
   id        String   @id @default(uuid()) @db.Uuid
-  name      String
+  name      String   @unique
   address   String?
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -98,7 +103,7 @@ model PosSession {
 }
 
 model Floor {
-  id       String @id @default(uuid()) @db.Uuid
+  id       String  @id @default(uuid()) @db.Uuid
   branchId String? @map("branch_id") @db.Uuid
   name     String
 
@@ -121,13 +126,14 @@ model Table {
 }
 
 model Category {
-  id       String @id @default(uuid()) @db.Uuid
+  id       String  @id @default(uuid()) @db.Uuid
   branchId String? @map("branch_id") @db.Uuid
   name     String
 
   branch   Branch?   @relation(fields: [branchId], references: [id])
   products Product[]
 
+  @@unique([branchId, name])
   @@map("categories")
 }
 
@@ -157,13 +163,13 @@ model Order {
   totalAmount Decimal     @default(0) @map("total_amount") @db.Decimal(12, 2)
   createdAt   DateTime    @default(now()) @map("created_at")
 
-  branch    Branch?     @relation(fields: [branchId], references: [id])
-  session   PosSession? @relation(fields: [sessionId], references: [id])
-  table     Table?      @relation(fields: [tableId], references: [id])
-  creator   User?       @relation(fields: [createdBy], references: [id])
+  branch     Branch?     @relation(fields: [branchId], references: [id])
+  session    PosSession? @relation(fields: [sessionId], references: [id])
+  table      Table?      @relation(fields: [tableId], references: [id])
+  creator    User?       @relation(fields: [createdBy], references: [id])
   orderItems OrderItem[]
-  payments  Payment[]
-  receipts  Receipt[]
+  payments   Payment[]
+  receipts   Receipt[]
 
   @@map("orders")
 }
