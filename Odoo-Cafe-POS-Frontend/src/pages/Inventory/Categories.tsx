@@ -2,18 +2,19 @@
  * Categories Management Page
  * CRUD operations for product categories with icon picker and drag-drop reordering
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { Edit2, Trash2, X, FolderOpen, GripVertical } from 'lucide-react';
+import { Edit2, Trash2, X, FolderOpen, GripVertical, Loader2 } from 'lucide-react';
 import AdminPageLayout from '../../components/admin/AdminPageLayout';
-
-interface Category {
-    id: string;
-    name: string;
-    productCount: number;
-    icon: string;
-    order: number;
-}
+import {
+    getCategories,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    updateCategoryOrder,
+    type Category,
+} from '../../api/categories.api';
+import { getBranches } from '../../api/branches.api';
 
 // Available icons for category selection
 const CATEGORY_ICONS = [
@@ -25,21 +26,44 @@ const CATEGORY_ICONS = [
     '🥚', '🧀', '🥖', '🥨', '🥐', '🫓', '🥯', '🍞',
 ];
 
-// Mock data with order
-const mockCategories: Category[] = [
-    { id: 'cat-1', name: 'Starters', productCount: 6, icon: '🥗', order: 1 },
-    { id: 'cat-2', name: 'Main Course', productCount: 6, icon: '🍛', order: 2 },
-    { id: 'cat-3', name: 'Drinks', productCount: 6, icon: '🍹', order: 3 },
-    { id: 'cat-4', name: 'Desserts', productCount: 5, icon: '🍰', order: 4 },
-    { id: 'cat-5', name: 'Sides', productCount: 5, icon: '🍟', order: 5 },
-];
-
 const Categories = () => {
-    const [categories, setCategories] = useState<Category[]>(mockCategories);
+    const [categories, setCategories] = useState<Category[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [formData, setFormData] = useState({ name: '', icon: '📁' });
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [branchId, setBranchId] = useState<string | null>(null);
+
+    // Load categories on mount
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                setIsLoading(true);
+                setError(null);
+                
+                // Get the first branch (single branch system)
+                const branches = await getBranches();
+                if (branches.length > 0) {
+                    setBranchId(branches[0].id);
+                    const cats = await getCategories(branches[0].id);
+                    setCategories(cats);
+                } else {
+                    // No branches, create one first
+                    setError('No branch found. Please create a branch first.');
+                }
+            } catch (err) {
+                setError('Failed to load categories');
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        loadData();
+    }, []);
 
     const filteredCategories = categories.filter(category =>
         category.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -58,10 +82,17 @@ const Categories = () => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (categoryId: string, e: React.MouseEvent) => {
+    const handleDelete = async (categoryId: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (confirm('Are you sure you want to delete this category?')) {
-            setCategories(categories.filter(c => c.id !== categoryId));
+            setIsSaving(true);
+            const result = await deleteCategory(categoryId);
+            if (result.success) {
+                setCategories(categories.filter(c => c.id !== categoryId));
+            } else {
+                alert(result.error || 'Failed to delete category');
+            }
+            setIsSaving(false);
         }
     };
 
@@ -72,32 +103,68 @@ const Categories = () => {
             order: index + 1
         }));
         setCategories(reordered);
+        // Save order to localStorage
+        updateCategoryOrder(reordered);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!branchId) {
+            alert('No branch available');
+            return;
+        }
+        
+        setIsSaving(true);
 
         if (editingCategory) {
-            setCategories(categories.map(c =>
-                c.id === editingCategory.id
-                    ? { ...c, name: formData.name, icon: formData.icon }
-                    : c
-            ));
-        } else {
-            const newCategory: Category = {
-                id: `cat-${Date.now()}`,
+            const result = await updateCategory(editingCategory.id, {
                 name: formData.name,
-                productCount: 0,
                 icon: formData.icon,
-                order: categories.length + 1,
-            };
-            setCategories([...categories, newCategory]);
+            });
+            if (result.success && result.category) {
+                setCategories(categories.map(c =>
+                    c.id === editingCategory.id ? result.category! : c
+                ));
+            } else {
+                alert(result.error || 'Failed to update category');
+            }
+        } else {
+            const result = await createCategory(branchId, formData.name, formData.icon);
+            if (result.success && result.category) {
+                setCategories([...categories, result.category]);
+            } else {
+                alert(result.error || 'Failed to create category');
+            }
         }
 
+        setIsSaving(false);
         setIsModalOpen(false);
     };
 
     const isSearching = searchQuery.length > 0;
+
+    // Loading state
+    if (isLoading) {
+        return (
+            <AdminPageLayout title="Categories" searchValue="" onSearchChange={() => {}} onNewClick={() => {}} newButtonLabel="New Category">
+                <div className="categories-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+                    <Loader2 size={32} className="spin-animation" style={{ animation: 'spin 1s linear infinite' }} />
+                </div>
+                <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+            </AdminPageLayout>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <AdminPageLayout title="Categories" searchValue="" onSearchChange={() => {}} onNewClick={() => {}} newButtonLabel="New Category">
+                <div className="categories-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px', color: '#e53e3e' }}>
+                    <p>{error}</p>
+                </div>
+            </AdminPageLayout>
+        );
+    }
 
     return (
         <AdminPageLayout
@@ -108,6 +175,12 @@ const Categories = () => {
             newButtonLabel="New Category"
         >
             <div className="categories-page">
+                {isSaving && (
+                    <div className="saving-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.2)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+                        <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: 'white' }} />
+                    </div>
+                )}
+                
                 {!isSearching && (
                     <div className="categories-hint">
                         <GripVertical size={16} />
