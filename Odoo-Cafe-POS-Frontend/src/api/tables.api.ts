@@ -144,12 +144,16 @@ const mapBackendTable = (t: BackendTable): Table => ({
 });
 
 /**
- * Get all tables from backend
- * GET /api/tables
+ * Get all tables from backend (optionally filtered by floor)
+ * GET /api/tables?floorId=...
  */
-export const getTablesBackendApi = async (): Promise<Table[]> => {
+export const getTablesBackendApi = async (floorId?: string): Promise<Table[]> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/tables`, {
+        const url = floorId
+            ? `${API_BASE_URL}/tables?floorId=${encodeURIComponent(floorId)}`
+            : `${API_BASE_URL}/tables`;
+
+        const response = await fetch(url, {
             method: 'GET',
             headers: getAuthHeaders(),
         });
@@ -190,5 +194,38 @@ export const getTableByIdBackendApi = async (tableId: string): Promise<Table | u
     } catch (error) {
         console.error('Get table by ID error:', error);
         return undefined;
+    }
+};
+
+/**
+ * Get floors from backend (filtered by branch)
+ * GET /api/floors?branchId=...
+ */
+export const getFloorsBackendApi = async (branchId: string): Promise<Floor[]> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/floors?branchId=${encodeURIComponent(branchId)}`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch floors');
+            return [];
+        }
+
+        const data = await response.json();
+        // Backend returns array of floors
+        // Map backend floor to frontend Floor interface
+        // Note: Backend might not return tableCount, so we might need to handle that if used
+
+        // Use Type Assertion if needed or define BackendFloor interface
+        return (Array.isArray(data) ? data : []).map((f: any) => ({
+            id: f.id,
+            name: f.name,
+            tableCount: 0 // Backend currently doesn't send count, defaulting to 0
+        }));
+    } catch (error) {
+        console.error('Get floors error:', error);
+        return [];
     }
 };

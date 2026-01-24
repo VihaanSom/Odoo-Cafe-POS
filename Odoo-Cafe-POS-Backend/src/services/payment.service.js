@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const { MESSAGES, PAYMENT_STATUS, ORDER_STATUS, TABLE_STATUS, ORDER_TYPE } = require('../utils/constants');
+const socketUtil = require('../utils/socket');
 
 /**
  * Process Payment
@@ -21,7 +22,7 @@ const processPayment = async (data) => {
     }
 
     // 2. Transaction
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
         // Create Payment
         const payment = await tx.payment.create({
             data: {
@@ -39,16 +40,53 @@ const processPayment = async (data) => {
             data: { status: ORDER_STATUS.COMPLETED }
         });
 
-        // If Dine In, Free the Table
+        let tableUpdated = false;
+
+        // Check if table needs to be freed
         if (order.orderType === ORDER_TYPE.DINE_IN && order.tableId) {
-            await tx.table.update({
-                where: { id: order.tableId },
-                data: { status: TABLE_STATUS.FREE }
+            // Count OTHER active orders for this table
+            const activeOrdersCount = await tx.order.count({
+                where: {
+                    tableId: order.tableId,
+                    status: {
+                        in: [ORDER_STATUS.CREATED, ORDER_STATUS.IN_PROGRESS, ORDER_STATUS.READY]
+                    },
+                    id: { not: orderId } // Exclude current order
+                }
             });
+
+            // If no other active orders, free the table
+            if (activeOrdersCount === 0) {
+                await tx.table.update({
+                    where: { id: order.tableId },
+                    data: { status: TABLE_STATUS.FREE }
+                });
+                tableUpdated = true;
+            }
         }
 
-        return payment;
+        return { payment, tableUpdated, tableId: order.tableId };
     });
+
+    // 3. Emit Socket Event if table status changed
+    if (result.tableUpdated && result.tableId) {
+        try {
+            const io = socketUtil.getIO();
+            const updatedTable = await prisma.table.findUnique({
+                where: { id: result.tableId },
+                include: { floor: true }
+            });
+
+            if (updatedTable) {
+                io.emit('table:updated', updatedTable);
+            }
+        } catch (e) {
+            console.error('Socket emit error:', e);
+            // Don't fail the request if socket fails
+        }
+    }
+
+    return result.payment;
 };
 
 /**
