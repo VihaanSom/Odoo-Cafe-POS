@@ -4,7 +4,7 @@ const authRoutes = require('./auth.routes');
 // Dev A routes (uncomment when ready)
 const branchRoutes = require('./branch.routes');
 const categoryRoutes = require('./category.routes');
-// const productRoutes = require('./product.routes');
+const productRoutes = require('./product.routes');
 // const floorRoutes = require('./floor.routes');
 // const tableRoutes = require('./table.routes');
 // const kitchenRoutes = require('./kitchen.routes');
@@ -23,7 +23,7 @@ router.use('/auth', authRoutes);
 // Dev A: Master Data
 router.use('/branches', branchRoutes);
 router.use('/categories', categoryRoutes);
-// router.use('/products', productRoutes);
+router.use('/products', productRoutes);
 // router.use('/floors', floorRoutes);
 // router.use('/tables', tableRoutes);
 // router.use('/kitchen', kitchenRoutes);
