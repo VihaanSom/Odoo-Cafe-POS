@@ -64,7 +64,7 @@ const Signup = () => {
                         <RestaurantIcon sx={{ fontSize: 48, color: 'var(--primary-color)' }} />
                     </motion.div>
                     <h1 className="auth-card__title">Create Account</h1>
-                    <p className="auth-card__subtitle">Set up your restaurant POS</p>
+                    <p className="auth-card__subtitle">Join Odoo Cafe POS</p>
                 </div>
 
                 <form className="auth-form" onSubmit={handleSubmit}>

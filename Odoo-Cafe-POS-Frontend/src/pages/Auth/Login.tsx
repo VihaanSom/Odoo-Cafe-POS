@@ -57,7 +57,7 @@ const Login = () => {
                         <RestaurantIcon sx={{ fontSize: 48, color: 'var(--primary-color)' }} />
                     </motion.div>
                     <h1 className="auth-card__title">Welcome Back</h1>
-                    <p className="auth-card__subtitle">Sign in to your restaurant POS</p>
+                    <p className="auth-card__subtitle">Sign in to Odoo Cafe POS</p>
                 </div>
 
                 <form className="auth-form" onSubmit={handleSubmit}>
