@@ -249,9 +249,86 @@ export const generateReceipt = async (orderId: string): Promise<{ success: boole
     });
 };
 
+// ============================================
+// REAL BACKEND API FUNCTIONS
+// ============================================
+
+const API_BASE_URL = 'http://localhost:5000/api';
+
+const getAuthHeaders = (): HeadersInit => {
+    const token = localStorage.getItem('pos_auth_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
+
+/**
+ * Get active order for a table from backend
+ * GET /api/orders/table/:tableId/active
+ * Critical for "View Bill" functionality
+ */
+export const getActiveOrderByTableApi = async (tableId: string): Promise<OrderResponse> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/orders/table/${encodeURIComponent(tableId)}/active`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        if (response.status === 404) {
+            // No active order for this table is not an error
+            return {
+                success: false,
+                error: 'No active order for this table',
+            };
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: data.message || 'Failed to get active order',
+            };
+        }
+
+        // Map backend response to frontend Order interface
+        const backendOrder = data;
+        const order: Order = {
+            id: backendOrder.id,
+            branch_id: backendOrder.branchId,
+            session_id: backendOrder.sessionId,
+            table_id: backendOrder.tableId,
+            order_type: backendOrder.orderType,
+            status: backendOrder.status,
+            total_amount: Number(backendOrder.totalAmount),
+            customer_name: backendOrder.customerName,
+            created_by: backendOrder.createdBy,
+            created_at: backendOrder.createdAt,
+            items: (backendOrder.orderItems || []).map((item: { id: string; orderId: string; productId: string; quantity: number; priceAtTime: string | number; product?: { name: string } }) => ({
+                id: item.id,
+                order_id: item.orderId,
+                product_id: item.productId,
+                quantity: item.quantity,
+                price_at_time: Number(item.priceAtTime),
+                product_name: item.product?.name,
+            })),
+        };
+
+        return { success: true, order };
+    } catch (error) {
+        console.error('Get active order by table error:', error);
+        return {
+            success: false,
+            error: 'Network error. Please try again.',
+        };
+    }
+};
+
 /**
  * Clear all mock orders (for testing)
  */
 export const clearMockOrders = (): void => {
     mockOrders = [];
 };
+

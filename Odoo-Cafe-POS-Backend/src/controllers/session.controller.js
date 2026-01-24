@@ -59,10 +59,34 @@ const getActiveSessions = async (req, res, next) => {
         next(error);
     }
 };
+/**
+ * GET /api/sessions/current
+ * Get current active session for a terminal
+ */
+const getCurrentSession = async (req, res, next) => {
+    try {
+        const { terminalId } = req.query;
+
+        if (!terminalId) {
+            return res.status(400).json({ message: 'Terminal ID is required' });
+        }
+
+        const session = await sessionService.getCurrentSession(terminalId);
+
+        if (!session) {
+            return res.status(404).json({ message: 'No active session found for this terminal' });
+        }
+
+        res.json({ session });
+    } catch (error) {
+        next(error);
+    }
+};
 
 module.exports = {
     openSession,
     closeSession,
     getSessionById,
-    getActiveSessions
+    getActiveSessions,
+    getCurrentSession
 };

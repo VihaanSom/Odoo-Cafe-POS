@@ -13,6 +13,9 @@ router.post('/open', sessionController.openSession);
 // Get all active sessions
 router.get('/active', sessionController.getActiveSessions);
 
+// Get current session for a terminal
+router.get('/current', sessionController.getCurrentSession);
+
 // Get session by ID
 router.get('/:id', sessionController.getSessionById);
 

@@ -177,9 +177,99 @@ export const getAllSessions = async (): Promise<Session[]> => {
     });
 };
 
+// ============================================
+// REAL BACKEND API FUNCTIONS
+// ============================================
+
+const API_BASE_URL = 'http://localhost:5000/api';
+
+const getAuthHeaders = (): HeadersInit => {
+    const token = localStorage.getItem('pos_auth_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
+
+/**
+ * Get all active sessions from backend
+ * GET /api/sessions/active
+ */
+export const getActiveSessionsApi = async (): Promise<OpenSessionResponse> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/sessions/active`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: data.message || 'Failed to get active sessions',
+            };
+        }
+
+        // Return first active session if exists (for compatibility)
+        const sessions = data.sessions || [];
+        if (sessions.length > 0) {
+            return {
+                success: true,
+                session: sessions[0],
+            };
+        }
+
+        return {
+            success: false,
+            error: 'No active session found',
+        };
+    } catch (error) {
+        console.error('Get active sessions error:', error);
+        return {
+            success: false,
+            error: 'Network error. Please try again.',
+        };
+    }
+};
+
+/**
+ * Get current session for a terminal from backend
+ * GET /api/sessions/current?terminalId=...
+ */
+export const getCurrentSessionFromBackendApi = async (terminalId: string): Promise<OpenSessionResponse> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/sessions/current?terminalId=${encodeURIComponent(terminalId)}`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: data.message || 'No active session found',
+            };
+        }
+
+        return {
+            success: true,
+            session: data.session,
+        };
+    } catch (error) {
+        console.error('Get current session error:', error);
+        return {
+            success: false,
+            error: 'Network error. Please try again.',
+        };
+    }
+};
+
 /**
  * Clear all mock sessions (for testing)
  */
 export const clearMockSessions = (): void => {
     mockSessions = [];
 };
+
