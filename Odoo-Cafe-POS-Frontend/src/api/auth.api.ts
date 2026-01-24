@@ -27,35 +27,48 @@ export interface AuthResponse {
     error?: string;
 }
 
+const API_URL = 'http://localhost:5000/api';
+
 /**
- * Simulates a login API call
- * Returns a fake token after 1 second delay
+ * Login API call
+ * Authenticates user with the backend
  */
 export const loginApi = async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            // Mock validation - in real app, this would be server-side
-            if (!credentials.email || !credentials.password) {
-                resolve({
-                    success: false,
-                    error: 'Email and password are required',
-                });
-                return;
-            }
+    try {
+        const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(credentials),
+        });
 
-            // Simulate successful login
-            resolve({
-                success: true,
-                token: `mock-jwt-token-${Date.now()}`,
-                user: {
-                    id: 'usr_' + Math.random().toString(36).substr(2, 9),
-                    email: credentials.email,
-                    fullName: 'Restaurant Owner',
-                    restaurantName: 'My Restaurant',
-                },
-            });
-        }, 1000);
-    });
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: data.message || 'Login failed',
+            };
+        }
+
+        return {
+            success: true,
+            token: data.token,
+            user: {
+                id: data.user.id,
+                email: data.user.email,
+                fullName: data.user.name,
+                restaurantName: 'Odoo Cafe', // Placeholder as backend doesn't return this yet
+            },
+        };
+    } catch (error) {
+        console.error('Login error:', error);
+        return {
+            success: false,
+            error: 'Network error. Please try again.',
+        };
+    }
 };
 
 /**
