@@ -104,6 +104,39 @@
     outline: none;
 }
 
+/* Password Input Wrapper */
+.auth-form__input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.auth-form__input--with-icon {
+    padding-right: 3rem;
+}
+
+.auth-form__toggle-password {
+    position: absolute;
+    right: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+}
+
+.auth-form__toggle-password:hover {
+    color: var(--text-main);
+}
+
+.auth-form__toggle-password:focus {
+    outline: none;
+}
+
 /* Submit Button */
 .auth-form__submit {
     width: 100%;
