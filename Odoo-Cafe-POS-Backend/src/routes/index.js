@@ -7,8 +7,8 @@ const categoryRoutes = require('./category.routes');
 const productRoutes = require('./product.routes');
 const floorRoutes = require('./floor.routes');
 const tableRoutes = require('./table.routes');
-// const kitchenRoutes = require('./kitchen.routes');
-// const reportRoutes = require('./report.routes');
+const kitchenRoutes = require('./kitchen.routes');
+const reportRoutes = require('./report.routes');
 
 // Dev B routes (uncomment when ready)
 // const sessionRoutes = require('./session.routes');
@@ -26,8 +26,8 @@ router.use('/categories', categoryRoutes);
 router.use('/products', productRoutes);
 router.use('/floors', floorRoutes);
 router.use('/tables', tableRoutes);
-// router.use('/kitchen', kitchenRoutes);
-// router.use('/reports', reportRoutes);
+router.use('/kitchen', kitchenRoutes);
+router.use('/reports', reportRoutes);
 
 // Dev B: Orders & Payments
 // router.use('/sessions', sessionRoutes);
