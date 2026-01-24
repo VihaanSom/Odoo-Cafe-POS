@@ -5,6 +5,14 @@
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
+const getAuthHeaders = (): HeadersInit => {
+    const token = localStorage.getItem('pos_auth_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
+
 export interface Branch {
     id: string;
     name: string;
@@ -111,7 +119,7 @@ export const getBranchById = async (branchId: string): Promise<Branch | null> =>
  */
 export const getTerminals = async (branchId?: string): Promise<Terminal[]> => {
     try {
-        const url = branchId 
+        const url = branchId
             ? `${API_BASE_URL}/terminals?branchId=${branchId}`
             : `${API_BASE_URL}/terminals`;
         const response = await fetch(url);
@@ -189,15 +197,7 @@ export const getTerminalById = async (terminalId: string): Promise<Terminal | nu
 // REAL BACKEND API FUNCTIONS
 // ============================================
 
-const API_BASE_URL = 'http://localhost:5000/api';
 
-const getAuthHeaders = (): HeadersInit => {
-    const token = localStorage.getItem('pos_auth_token');
-    return {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-    };
-};
 
 /**
  * Backend Terminal interface (camelCase)
@@ -224,10 +224,10 @@ interface BackendTerminal {
  */
 const mapBackendTerminal = (t: BackendTerminal): Terminal => ({
     id: t.id,
-    branch_id: t.branchId || '',
-    terminal_name: t.terminalName,
-    user_id: t.userId,
-    created_at: t.createdAt,
+    branchId: t.branchId || '',
+    terminalName: t.terminalName,
+    userId: t.userId,
+    createdAt: t.createdAt,
 });
 
 /**

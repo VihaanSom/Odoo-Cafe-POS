@@ -202,7 +202,7 @@ const Dashboard = () => {
                                     >
                                         {terminals.map((terminal) => (
                                             <option key={terminal.id} value={terminal.id}>
-                                                {terminal.terminal_name}
+                                                {terminal.terminalName}
                                             </option>
                                         ))}
                                     </select>
