@@ -1,0 +1,338 @@
+/* ============================================
+   POS Layout Styles
+   BEM Naming Convention
+   ============================================ */
+
+/* Main POS Layout */
+.pos-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: var(--bg-color);
+}
+
+/* Sidebar Navigation */
+.pos-sidebar {
+    width: 80px;
+    background: var(--card-bg);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem 0;
+    gap: 0.5rem;
+}
+
+.pos-sidebar__logo {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--primary-color), #00c6ff);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-bottom: 1.5rem;
+}
+
+.pos-sidebar__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.pos-sidebar__item {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.pos-sidebar__item:hover {
+    background: var(--bg-color);
+    color: var(--text-main);
+}
+
+.pos-sidebar__item--active {
+    background: rgba(0, 123, 255, 0.1);
+    color: var(--primary-color);
+}
+
+/* Main Content Area */
+.pos-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+/* Header */
+.pos-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.pos-header__title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.pos-header__subtitle {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+.pos-header__actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+/* Floor Tabs (Pill Style) */
+.floor-tabs {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.floor-tabs__item {
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    background: var(--card-bg);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.floor-tabs__item:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.floor-tabs__item--active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* Table Grid */
+.table-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 24px;
+}
+
+/* ============================================
+   Table Card Styles
+   ============================================ */
+
+.table-card {
+    background: var(--card-bg);
+    border: 2px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 180px;
+    position: relative;
+}
+
+.table-card:hover {
+    box-shadow: var(--shadow-card);
+}
+
+/* Table Card States */
+.table-card--free {
+    background: var(--card-bg);
+    border: 2px dashed var(--border-color);
+}
+
+.table-card--occupied {
+    background: #FFF7ED;
+    border: 2px solid #F97316;
+}
+
+.table-card--reserved {
+    background: #EFF6FF;
+    border: 2px solid #3B82F6;
+}
+
+/* Table Card Elements */
+.table-card__number {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+}
+
+.table-card__seats {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+}
+
+.table-card__seats-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.table-card__status {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    margin-top: auto;
+}
+
+.table-card__status--free {
+    background: #DCFCE7;
+    color: #16A34A;
+}
+
+.table-card__status--occupied {
+    background: #FFEDD5;
+    color: #EA580C;
+}
+
+.table-card__status--reserved {
+    background: #DBEAFE;
+    color: #2563EB;
+}
+
+/* Timer/Info for occupied tables */
+.table-card__info {
+    font-size: 0.8rem;
+    color: #EA580C;
+    font-weight: 500;
+    margin-top: 0.5rem;
+}
+
+/* User Info */
+.pos-user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--card-bg);
+    border-radius: 50px;
+    border: 1px solid var(--border-color);
+}
+
+.pos-user__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), #00c6ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.pos-user__name {
+    font-weight: 500;
+    color: var(--text-main);
+    font-size: 0.9rem;
+}
+
+/* Stats Bar */
+.pos-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    padding: 1rem 1.5rem;
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-card);
+}
+
+.pos-stats__item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.pos-stats__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pos-stats__icon--free {
+    background: #DCFCE7;
+    color: #16A34A;
+}
+
+.pos-stats__icon--occupied {
+    background: #FFEDD5;
+    color: #EA580C;
+}
+
+.pos-stats__icon--reserved {
+    background: #DBEAFE;
+    color: #2563EB;
+}
+
+.pos-stats__text {
+    display: flex;
+    flex-direction: column;
+}
+
+.pos-stats__count {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.pos-stats__label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .pos-sidebar {
+        width: 60px;
+    }
+
+    .pos-content {
+        padding: 1rem;
+    }
+
+    .table-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 16px;
+    }
+
+    .pos-stats {
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+}
