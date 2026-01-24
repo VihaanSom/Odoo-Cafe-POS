@@ -14,6 +14,7 @@ import {
     archiveProducts,
     deleteProducts,
 } from '../../api/products.api';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 const ProductList = () => {
     const navigate = useNavigate();
@@ -22,6 +23,10 @@ const ProductList = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Confirm dialog state
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [confirmType, setConfirmType] = useState<'delete' | 'archive'>('delete');
 
     // Load products and categories
     useEffect(() => {
@@ -63,23 +68,28 @@ const ProductList = () => {
         }
     };
 
-    const handleArchive = async () => {
+    const handleArchiveClick = () => {
         if (selectedIds.length === 0) return;
-        if (!confirm(`Archive ${selectedIds.length} product(s)?`)) return;
-
-        await archiveProducts(selectedIds);
-        setProducts(prev => prev.map(p =>
-            selectedIds.includes(p.id) ? { ...p, status: 'archived' as const, isActive: false } : p
-        ));
-        setSelectedIds([]);
+        setConfirmType('archive');
+        setConfirmOpen(true);
     };
 
-    const handleBulkDelete = async () => {
+    const handleDeleteClick = () => {
         if (selectedIds.length === 0) return;
-        if (!confirm(`Permanently delete ${selectedIds.length} product(s)? This cannot be undone.`)) return;
+        setConfirmType('delete');
+        setConfirmOpen(true);
+    };
 
-        await deleteProducts(selectedIds);
-        setProducts(prev => prev.filter(p => !selectedIds.includes(p.id)));
+    const handleConfirm = async () => {
+        if (confirmType === 'archive') {
+            await archiveProducts(selectedIds);
+            setProducts(prev => prev.map(p =>
+                selectedIds.includes(p.id) ? { ...p, status: 'archived' as const, isActive: false } : p
+            ));
+        } else {
+            await deleteProducts(selectedIds);
+            setProducts(prev => prev.filter(p => !selectedIds.includes(p.id)));
+        }
         setSelectedIds([]);
     };
 
@@ -118,14 +128,14 @@ const ProductList = () => {
                         </span>
                         <button
                             className="product-list__action-btn product-list__action-btn--archive"
-                            onClick={handleArchive}
+                            onClick={handleArchiveClick}
                         >
                             <Archive size={16} />
                             Archive
                         </button>
                         <button
                             className="product-list__action-btn product-list__action-btn--delete"
-                            onClick={handleBulkDelete}
+                            onClick={handleDeleteClick}
                         >
                             <Trash2 size={16} />
                             Delete
@@ -397,6 +407,21 @@ const ProductList = () => {
                     background: #B2DFDB !important;
                 }
             `}</style>
+
+            {/* Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleConfirm}
+                type={confirmType}
+                title={confirmType === 'delete' ? 'Delete Products' : 'Archive Products'}
+                message={confirmType === 'delete'
+                    ? `Are you sure you want to permanently delete ${selectedIds.length} product(s)? This cannot be undone.`
+                    : `Are you sure you want to archive ${selectedIds.length} product(s)?`
+                }
+                confirmLabel={confirmType === 'delete' ? 'Delete' : 'Archive'}
+                cancelLabel="Cancel"
+            />
         </div>
     );
 };

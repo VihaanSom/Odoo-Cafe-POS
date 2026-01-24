@@ -1,11 +1,12 @@
 /**
  * Orders Management Page
- * View completed orders with receipt details
+ * Backend view with bulk selection and action buttons
  */
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, X, Receipt, Printer } from 'lucide-react';
+import { Eye, X, Receipt, Printer, Archive, Trash2 } from 'lucide-react';
 import AdminPageLayout from '../../components/admin/AdminPageLayout';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 interface OrderItem {
     name: string;
@@ -16,119 +17,163 @@ interface OrderItem {
 interface Order {
     id: string;
     orderNumber: string;
+    session: string;
+    date: string;
+    total: number;
+    customer: string;
+    status: 'COMPLETED' | 'DRAFT' | 'ARCHIVED';
     table: string;
     orderType: 'DINE_IN' | 'TAKEAWAY';
     items: OrderItem[];
     subtotal: number;
     tax: number;
-    total: number;
-    status: 'COMPLETED' | 'CANCELLED' | 'REFUNDED';
     paymentMethod: string;
-    createdAt: string;
-    customerName?: string;
 }
 
 // Mock data
 const mockOrders: Order[] = [
     {
-        id: 'order-1001',
-        orderNumber: '#1001',
+        id: 'order-1',
+        orderNumber: '001',
+        session: '01',
+        date: '5 Jan 2026',
+        total: 350,
+        customer: 'Eric',
+        status: 'COMPLETED',
         table: 'T-02',
         orderType: 'DINE_IN',
         items: [
-            { name: 'Butter Chicken', quantity: 2, price: 399 },
-            { name: 'Naan Bread', quantity: 4, price: 59 },
-            { name: 'Cold Coffee', quantity: 2, price: 149 },
+            { name: 'Butter Chicken', quantity: 2, price: 150 },
+            { name: 'Naan Bread', quantity: 2, price: 25 },
         ],
-        subtotal: 1132,
-        tax: 56.60,
-        total: 1188.60,
-        status: 'COMPLETED',
+        subtotal: 350,
+        tax: 17.50,
         paymentMethod: 'UPI',
-        createdAt: '2026-01-24T20:30:00',
     },
     {
-        id: 'order-1002',
-        orderNumber: '#1002',
+        id: 'order-2',
+        orderNumber: '002',
+        session: '01',
+        date: '5 Jan 2026',
+        total: 350,
+        customer: 'Smith',
+        status: 'DRAFT',
+        table: 'T-03',
+        orderType: 'DINE_IN',
+        items: [
+            { name: 'Pizza', quantity: 1, price: 350 },
+        ],
+        subtotal: 350,
+        tax: 17.50,
+        paymentMethod: '-',
+    },
+    {
+        id: 'order-3',
+        orderNumber: '003',
+        session: '01',
+        date: '5 Jan 2026',
+        total: 350,
+        customer: 'Jacob',
+        status: 'COMPLETED',
         table: 'P-01',
         orderType: 'DINE_IN',
         items: [
-            { name: 'Grilled Salmon', quantity: 1, price: 549 },
-            { name: 'Caesar Salad', quantity: 1, price: 199 },
+            { name: 'Grilled Salmon', quantity: 1, price: 350 },
         ],
-        subtotal: 748,
-        tax: 37.40,
-        total: 785.40,
-        status: 'COMPLETED',
+        subtotal: 350,
+        tax: 17.50,
         paymentMethod: 'CARD',
-        createdAt: '2026-01-24T19:45:00',
     },
     {
-        id: 'order-1003',
-        orderNumber: '#1003',
+        id: 'order-4',
+        orderNumber: '004',
+        session: '02',
+        date: '6 Jan 2026',
+        total: 520,
+        customer: 'Altruistic Cormorant',
+        status: 'ARCHIVED',
         table: '-',
         orderType: 'TAKEAWAY',
-        customerName: 'Rahul',
         items: [
-            { name: 'Margherita Pizza', quantity: 2, price: 349 },
-            { name: 'French Fries', quantity: 2, price: 129 },
+            { name: 'Combo Meal', quantity: 2, price: 260 },
         ],
-        subtotal: 956,
-        tax: 47.80,
-        total: 1003.80,
-        status: 'COMPLETED',
+        subtotal: 520,
+        tax: 26,
         paymentMethod: 'CASH',
-        createdAt: '2026-01-24T18:20:00',
-    },
-    {
-        id: 'order-1004',
-        orderNumber: '#1004',
-        table: 'T-06',
-        orderType: 'DINE_IN',
-        items: [
-            { name: 'Crispy Chicken Wings', quantity: 2, price: 249 },
-        ],
-        subtotal: 498,
-        tax: 24.90,
-        total: 522.90,
-        status: 'CANCELLED',
-        paymentMethod: '-',
-        createdAt: '2026-01-24T17:15:00',
     },
 ];
 
 const Orders = () => {
-    const [orders] = useState<Order[]>(mockOrders);
+    const [orders, setOrders] = useState<Order[]>(mockOrders);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
+    // Confirm dialog state
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [confirmType, setConfirmType] = useState<'delete' | 'archive'>('delete');
+
+    // Filter based on search
     const filteredOrders = orders.filter(order =>
         order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.table.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customerName?.toLowerCase().includes(searchQuery.toLowerCase())
+        order.customer.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-IN', {
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
+    // Selection handlers
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev =>
+            prev.includes(id)
+                ? prev.filter(i => i !== id)
+                : [...prev, id]
+        );
+    };
+
+    const selectAll = () => {
+        if (selectedIds.length === filteredOrders.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(filteredOrders.map(o => o.id));
+        }
+    };
+
+    // Bulk actions
+    const handleArchiveClick = () => {
+        if (selectedIds.length === 0) return;
+        setConfirmType('archive');
+        setConfirmOpen(true);
+    };
+
+    const handleDeleteClick = () => {
+        if (selectedIds.length === 0) return;
+        setConfirmType('delete');
+        setConfirmOpen(true);
+    };
+
+    const handleConfirm = () => {
+        if (confirmType === 'archive') {
+            setOrders(prev => prev.map(o =>
+                selectedIds.includes(o.id) ? { ...o, status: 'ARCHIVED' as const } : o
+            ));
+        } else {
+            setOrders(prev => prev.filter(o => !selectedIds.includes(o.id)));
+        }
+        setSelectedIds([]);
     };
 
     const getStatusBadge = (status: Order['status']) => {
         switch (status) {
             case 'COMPLETED':
                 return 'admin-badge--success';
-            case 'CANCELLED':
-                return 'admin-badge--danger';
-            case 'REFUNDED':
+            case 'DRAFT':
                 return 'admin-badge--warning';
+            case 'ARCHIVED':
+                return 'admin-badge--neutral';
             default:
                 return 'admin-badge--neutral';
         }
     };
+
+    const hasSelection = selectedIds.length > 0;
 
     return (
         <AdminPageLayout
@@ -137,71 +182,98 @@ const Orders = () => {
             onSearchChange={setSearchQuery}
             showNewButton={false}
         >
-            <div className="admin-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Order #</th>
-                            <th>Type</th>
-                            <th>Table</th>
-                            <th>Items</th>
-                            <th>Total</th>
-                            <th>Payment</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                            <th style={{ width: '80px' }}>View</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredOrders.length === 0 ? (
+            <div className="orders-page">
+                {/* Selection Actions */}
+                {hasSelection && (
+                    <motion.div
+                        className="orders-actions"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                    >
+                        <span className="orders-actions__count">✕ {selectedIds.length} Selected</span>
+                        <button className="orders-actions__btn" onClick={handleArchiveClick}>
+                            <Archive size={14} />
+                            Archived
+                        </button>
+                        <button className="orders-actions__btn orders-actions__btn--danger" onClick={handleDeleteClick}>
+                            <Trash2 size={14} />
+                            Delete
+                        </button>
+                    </motion.div>
+                )}
+
+                {/* Orders Table */}
+                <div className="admin-table">
+                    <table>
+                        <thead>
                             <tr>
-                                <td colSpan={9}>
-                                    <div className="admin-empty">
-                                        <div className="admin-empty__icon"><Receipt size={48} /></div>
-                                        <p className="admin-empty__text">No orders found</p>
-                                    </div>
-                                </td>
+                                <th style={{ width: '40px' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedIds.length === filteredOrders.length && filteredOrders.length > 0}
+                                        onChange={selectAll}
+                                    />
+                                </th>
+                                <th>Order No</th>
+                                <th>Session</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Customer</th>
+                                <th>Status</th>
+                                <th style={{ width: '60px' }}></th>
                             </tr>
-                        ) : (
-                            filteredOrders.map((order) => (
-                                <motion.tr
-                                    key={order.id}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    layout
-                                    style={{ cursor: 'pointer' }}
-                                    onClick={() => setSelectedOrder(order)}
-                                >
-                                    <td><strong>{order.orderNumber}</strong></td>
-                                    <td>
-                                        <span className={`admin-badge ${order.orderType === 'DINE_IN' ? 'admin-badge--info' : 'admin-badge--neutral'}`}>
-                                            {order.orderType === 'DINE_IN' ? 'Dine In' : 'Takeaway'}
-                                        </span>
+                        </thead>
+                        <tbody>
+                            {filteredOrders.length === 0 ? (
+                                <tr>
+                                    <td colSpan={8}>
+                                        <div className="admin-empty">
+                                            <div className="admin-empty__icon"><Receipt size={48} /></div>
+                                            <p className="admin-empty__text">No orders found</p>
+                                        </div>
                                     </td>
-                                    <td>{order.table}</td>
-                                    <td>{order.items.length} items</td>
-                                    <td><strong>₹{order.total.toFixed(2)}</strong></td>
-                                    <td>{order.paymentMethod}</td>
-                                    <td>
-                                        <span className={`admin-badge ${getStatusBadge(order.status)}`}>
-                                            {order.status}
-                                        </span>
-                                    </td>
-                                    <td>{formatDate(order.createdAt)}</td>
-                                    <td>
-                                        <button
-                                            className="admin-table__action-btn"
-                                            onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
-                                            title="View Receipt"
-                                        >
-                                            <Eye size={16} />
-                                        </button>
-                                    </td>
-                                </motion.tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                                </tr>
+                            ) : (
+                                filteredOrders.map((order) => (
+                                    <motion.tr
+                                        key={order.id}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        layout
+                                        className={selectedIds.includes(order.id) ? 'row-selected' : ''}
+                                    >
+                                        <td onClick={(e) => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds.includes(order.id)}
+                                                onChange={() => toggleSelect(order.id)}
+                                            />
+                                        </td>
+                                        <td><strong>{order.orderNumber}</strong></td>
+                                        <td>{order.session}</td>
+                                        <td>{order.date}</td>
+                                        <td><strong>₹{order.total}</strong></td>
+                                        <td>{order.customer}</td>
+                                        <td>
+                                            <span className={`admin-badge ${getStatusBadge(order.status)}`}>
+                                                {order.status}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button
+                                                className="admin-table__action-btn"
+                                                onClick={() => setSelectedOrder(order)}
+                                                title="View Receipt"
+                                            >
+                                                <Eye size={16} />
+                                            </button>
+                                        </td>
+                                    </motion.tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* Order Receipt Modal */}
@@ -233,13 +305,13 @@ const Orders = () => {
                                 <div style={{ textAlign: 'center', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px dashed #ddd' }}>
                                     <h3 style={{ margin: 0 }}>Odoo Cafe</h3>
                                     <p style={{ margin: '0.25rem 0', color: '#666', fontSize: '0.85rem' }}>123 Main St, City</p>
-                                    <p style={{ margin: 0, fontSize: '0.85rem' }}>{formatDate(selectedOrder.createdAt)}</p>
+                                    <p style={{ margin: 0, fontSize: '0.85rem' }}>{selectedOrder.date}</p>
                                 </div>
 
                                 <div style={{ marginBottom: '1rem' }}>
-                                    <p><strong>Order:</strong> {selectedOrder.orderNumber}</p>
-                                    <p><strong>Type:</strong> {selectedOrder.orderType === 'DINE_IN' ? `Dine In - ${selectedOrder.table}` : 'Takeaway'}</p>
-                                    {selectedOrder.customerName && <p><strong>Customer:</strong> {selectedOrder.customerName}</p>}
+                                    <p><strong>Order:</strong> #{selectedOrder.orderNumber}</p>
+                                    <p><strong>Session:</strong> {selectedOrder.session}</p>
+                                    <p><strong>Customer:</strong> {selectedOrder.customer}</p>
                                 </div>
 
                                 <div style={{ borderTop: '1px dashed #ddd', borderBottom: '1px dashed #ddd', padding: '1rem 0', marginBottom: '1rem' }}>
@@ -262,11 +334,7 @@ const Orders = () => {
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #ddd' }}>
                                         <span>Total</span>
-                                        <span>₹{selectedOrder.total.toFixed(2)}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', color: '#666' }}>
-                                        <span>Payment</span>
-                                        <span>{selectedOrder.paymentMethod}</span>
+                                        <span>₹{selectedOrder.total}</span>
                                     </div>
                                 </div>
 
@@ -288,6 +356,88 @@ const Orders = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <style>{`
+                .orders-page {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+
+                .orders-actions {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 0.75rem 1rem;
+                    background: #1F2937;
+                    border-radius: 8px;
+                    width: fit-content;
+                }
+
+                .orders-actions__count {
+                    color: white;
+                    font-size: 0.9rem;
+                    font-weight: 500;
+                    padding-right: 0.75rem;
+                    border-right: 1px solid #4B5563;
+                }
+
+                .orders-actions__btn {
+                    padding: 0.5rem 0.85rem;
+                    border-radius: 6px;
+                    border: none;
+                    background: #374151;
+                    color: white;
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.35rem;
+                }
+
+                .orders-actions__btn:hover {
+                    background: #4B5563;
+                }
+
+                .orders-actions__btn--danger {
+                    background: #DC2626;
+                }
+
+                .orders-actions__btn--danger:hover {
+                    background: #B91C1C;
+                }
+
+                .admin-table input[type="checkbox"] {
+                    width: 16px;
+                    height: 16px;
+                    cursor: pointer;
+                    accent-color: var(--primary-color);
+                }
+
+                .admin-table tbody tr.row-selected {
+                    background: #E0F2F1 !important;
+                }
+
+                .admin-table tbody tr.row-selected:hover {
+                    background: #B2DFDB !important;
+                }
+            `}</style>
+
+            {/* Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleConfirm}
+                type={confirmType}
+                title={confirmType === 'delete' ? 'Delete Orders' : 'Archive Orders'}
+                message={confirmType === 'delete'
+                    ? `Are you sure you want to delete ${selectedIds.length} order(s)? This action cannot be undone.`
+                    : `Are you sure you want to archive ${selectedIds.length} order(s)?`
+                }
+                confirmLabel={confirmType === 'delete' ? 'Delete' : 'Archive'}
+                cancelLabel="Cancel"
+            />
         </AdminPageLayout>
     );
 };

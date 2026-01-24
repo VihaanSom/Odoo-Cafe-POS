@@ -65,6 +65,10 @@ const Categories = () => {
         loadData();
     }, []);
 
+    // Confirm dialog state
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+
     const filteredCategories = categories.filter(category =>
         category.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -237,7 +241,7 @@ const Categories = () => {
                                                 </button>
                                                 <button
                                                     className="admin-table__action-btn admin-table__action-btn--danger"
-                                                    onClick={(e) => handleDelete(category.id, e)}
+                                                    onClick={(e) => handleDeleteClick(category.id, e)}
                                                     title="Delete"
                                                 >
                                                     <Trash2 size={16} />
@@ -297,7 +301,7 @@ const Categories = () => {
                                             </button>
                                             <button
                                                 className="admin-table__action-btn admin-table__action-btn--danger"
-                                                onClick={(e) => handleDelete(category.id, e)}
+                                                onClick={(e) => handleDeleteClick(category.id, e)}
                                                 title="Delete"
                                             >
                                                 <Trash2 size={16} />
@@ -560,6 +564,18 @@ const Categories = () => {
                     }
                 }
             `}</style>
+
+            {/* Delete Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleDeleteConfirm}
+                type="delete"
+                title="Delete Category"
+                message="Are you sure you want to delete this category? This action cannot be undone."
+                confirmLabel="Delete"
+                cancelLabel="Cancel"
+            />
         </AdminPageLayout>
     );
 };
