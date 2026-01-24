@@ -31,21 +31,20 @@ export interface AuthResponse {
     error?: string;
 }
 
+const API_URL = 'http://localhost:5000/api';
+
 /**
  * Login API call
- * POST /api/auth/login
+ * Authenticates user with the backend
  */
 export const loginApi = async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        const response = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                email: credentials.email,
-                password: credentials.password,
-            }),
+            body: JSON.stringify(credentials),
         });
 
         const data = await response.json();
@@ -53,20 +52,25 @@ export const loginApi = async (credentials: LoginCredentials): Promise<AuthRespo
         if (!response.ok) {
             return {
                 success: false,
-                error: data.message || 'Login failed. Please check your credentials.',
+                error: data.message || 'Login failed',
             };
         }
 
         return {
             success: true,
             token: data.token,
-            user: data.user,
+            user: {
+                id: data.user.id,
+                email: data.user.email,
+                fullName: data.user.name,
+                restaurantName: 'Odoo Cafe', // Placeholder as backend doesn't return this yet
+            },
         };
     } catch (error) {
-        console.error('Login API error:', error);
+        console.error('Login error:', error);
         return {
             success: false,
-            error: 'Unable to connect to server. Please try again later.',
+            error: 'Network error. Please try again.',
         };
     }
 };
