@@ -146,6 +146,34 @@
     font-family: monospace;
 }
 
+.terminal-card__select {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-main);
+    background: var(--bg-color);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    max-width: 200px;
+}
+
+.terminal-card__select:hover:not(:disabled) {
+    border-color: var(--primary-color);
+}
+
+.terminal-card__select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+.terminal-card__select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .terminal-card__status {
     display: flex;
     align-items: center;

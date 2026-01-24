@@ -15,6 +15,7 @@ export interface Table {
     seats: number;
     status: 'FREE' | 'OCCUPIED' | 'RESERVED';
     floorId: string;
+    branchId?: string;
     occupiedInfo?: {
         duration: string;
         orderTotal?: string;
@@ -97,4 +98,97 @@ export const getFloorStats = async (floorId: string): Promise<{ free: number; oc
             });
         }, 100);
     });
+};
+
+// ============================================
+// REAL BACKEND API FUNCTIONS
+// ============================================
+
+const API_BASE_URL = 'http://localhost:5000/api';
+
+const getAuthHeaders = (): HeadersInit => {
+    const token = localStorage.getItem('pos_auth_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
+
+/**
+ * Backend Table interface
+ */
+interface BackendTable {
+    id: string;
+    tableNumber: string;
+    seats: number;
+    status: 'FREE' | 'OCCUPIED' | 'RESERVED';
+    floorId?: string;
+    branchId?: string;
+    floor?: {
+        id: string;
+        branchId: string;
+        name: string;
+    };
+}
+
+/**
+ * Map backend table to frontend Table interface
+ */
+const mapBackendTable = (t: BackendTable): Table => ({
+    id: t.id,
+    tableNumber: String(t.tableNumber),
+    seats: t.seats,
+    status: t.status,
+    floorId: t.floorId || t.floor?.id || 'floor-1',
+    branchId: t.floor?.branchId || t.branchId,
+});
+
+/**
+ * Get all tables from backend
+ * GET /api/tables
+ */
+export const getTablesBackendApi = async (): Promise<Table[]> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/tables`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch tables');
+            return [];
+        }
+
+        const data = await response.json();
+        // Backend returns array directly or { tables: [] }
+        const tablesData: BackendTable[] = Array.isArray(data) ? data : (data.tables || []);
+
+        return tablesData.map(mapBackendTable);
+    } catch (error) {
+        console.error('Get tables error:', error);
+        return [];
+    }
+};
+
+/**
+ * Get table by ID from backend
+ * GET /api/tables/:id
+ */
+export const getTableByIdBackendApi = async (tableId: string): Promise<Table | undefined> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/tables/${encodeURIComponent(tableId)}`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            return undefined;
+        }
+
+        const data: BackendTable = await response.json();
+        return mapBackendTable(data);
+    } catch (error) {
+        console.error('Get table by ID error:', error);
+        return undefined;
+    }
 };

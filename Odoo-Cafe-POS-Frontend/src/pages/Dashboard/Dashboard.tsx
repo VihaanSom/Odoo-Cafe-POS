@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -14,20 +15,41 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../store/auth.store';
 import { useSession } from '../../store/session.store';
+import { getTerminalsApi, type Terminal } from '../../api/branches.api';
 import StatCard from '../../components/common/StatCard';
 import './Dashboard.css';
-
-// Placeholder terminal ID until we have a terminals API
-const CONST_TERMINAL_ID = 'terminal-001-main';
 
 const Dashboard = () => {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const { session, isSessionActive, isLoading, error, startSession, endSession, clearError } = useSession();
 
+    // Terminal state
+    const [terminals, setTerminals] = useState<Terminal[]>([]);
+    const [selectedTerminalId, setSelectedTerminalId] = useState<string>('');
+    const [isLoadingTerminals, setIsLoadingTerminals] = useState(true);
+
+    // Load terminals on mount
+    useEffect(() => {
+        const loadTerminals = async () => {
+            setIsLoadingTerminals(true);
+            const terminalsData = await getTerminalsApi();
+            setTerminals(terminalsData);
+            // Auto-select first terminal if available
+            if (terminalsData.length > 0 && !selectedTerminalId) {
+                setSelectedTerminalId(terminalsData[0].id);
+            }
+            setIsLoadingTerminals(false);
+        };
+        loadTerminals();
+    }, []);
+
     const handleStartSession = async () => {
+        if (!selectedTerminalId) {
+            return;
+        }
         clearError();
-        const success = await startSession(CONST_TERMINAL_ID);
+        const success = await startSession(selectedTerminalId);
         if (success) {
             navigate('/pos/tables');
         }
@@ -170,14 +192,29 @@ const Dashboard = () => {
                                 size={20}
                                 style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle' }}
                             />
-                            Main Terminal
+                            {isLoadingTerminals ? 'Loading terminals...' : (
+                                terminals.length > 0 ? (
+                                    <select
+                                        className="terminal-card__select"
+                                        value={selectedTerminalId}
+                                        onChange={(e) => setSelectedTerminalId(e.target.value)}
+                                        disabled={isSessionActive || isLoading}
+                                    >
+                                        {terminals.map((terminal) => (
+                                            <option key={terminal.id} value={terminal.id}>
+                                                {terminal.terminal_name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                ) : 'No terminals available'
+                            )}
                             <span
                                 className={`terminal-card__status-dot ${isSessionActive ? 'terminal-card__status-dot--active' : ''}`}
                                 title={isSessionActive ? 'Session Active' : 'No Active Session'}
                                 style={{ marginLeft: '0.5rem', display: 'inline-block', verticalAlign: 'middle' }}
                             ></span>
                         </span>
-                        <span className="terminal-card__id">ID: {CONST_TERMINAL_ID}</span>
+                        <span className="terminal-card__id">ID: {selectedTerminalId || '—'}</span>
                     </div>
                 </div>
 

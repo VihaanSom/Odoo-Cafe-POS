@@ -127,9 +127,27 @@ const getActiveSessions = async () => {
     return sessions;
 };
 
+/**
+ * Get current active session for a terminal
+ */
+const getCurrentSession = async (terminalId) => {
+    const session = await prisma.posSession.findFirst({
+        where: {
+            terminalId,
+            closedAt: null
+        },
+        include: {
+            terminal: true
+        }
+    });
+
+    return session;
+};
+
 module.exports = {
     openSession,
     closeSession,
     getSessionById,
-    getActiveSessions
+    getActiveSessions,
+    getCurrentSession
 };

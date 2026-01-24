@@ -74,10 +74,20 @@ const generateReceipt = async (orderId) => {
         throw new Error(MESSAGES.ORDER_NOT_FOUND);
     }
 
-    // In a real app we might insert into a Receipt table or generate PDF
-    // For now, we return the structured data needed to print
+    // Generate Receipt Number
+    const receiptNumber = `RCPT-${Date.now()}`;
+
+    // 2. Save Receipt to Database
+    await prisma.receipt.create({
+        data: {
+            orderId,
+            receiptNumber
+        }
+    });
+
+    // 3. Return Receipt Data
     const receiptData = {
-        receiptNumber: `RCPT-${Date.now()}`, // Simple ID generation
+        receiptNumber,
         date: new Date(),
         branchId: order.branchId, // Or details if fetched
         orderId: order.id,

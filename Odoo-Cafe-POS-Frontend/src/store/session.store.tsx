@@ -6,8 +6,7 @@ import {
     useEffect,
     type ReactNode,
 } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { openSessionApi, closeSessionApi, type Session } from '../api/sessions.api';
+import { openSessionBackendApi, closeSessionBackendApi, type Session } from '../api/sessions.api';
 
 /**
  * Session Context State
@@ -68,7 +67,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
         setError(null);
 
         try {
-            const response = await openSessionApi(terminalId);
+            const response = await openSessionBackendApi(terminalId);
 
             if (response.success && response.session) {
                 setSession(response.session);
@@ -90,7 +89,7 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     /**
      * End the current POS session
      */
-    const endSession = useCallback(async (salesTotal: number): Promise<boolean> => {
+    const endSession = useCallback(async (_salesTotal: number): Promise<boolean> => {
         if (!session) {
             setError('No active session to close');
             return false;
@@ -100,7 +99,8 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
         setError(null);
 
         try {
-            const response = await closeSessionApi(session.id, salesTotal);
+            // Backend calculates salesTotal automatically from orders
+            const response = await closeSessionBackendApi(session.id);
 
             if (response.success) {
                 setSession(null);
