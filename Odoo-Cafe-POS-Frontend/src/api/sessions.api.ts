@@ -267,9 +267,102 @@ export const getCurrentSessionFromBackendApi = async (terminalId: string): Promi
 };
 
 /**
+ * Backend Session interface (camelCase)
+ */
+interface BackendSession {
+    id: string;
+    terminalId: string;
+    openedAt: string;
+    closedAt?: string | null;
+    totalSales: number | string;
+    terminal?: {
+        id: string;
+        terminalName: string;
+    };
+}
+
+/**
+ * Map backend session to frontend Session interface
+ */
+const mapBackendSession = (s: BackendSession): Session => ({
+    id: s.id,
+    terminal_id: s.terminalId,
+    opened_at: s.openedAt,
+    closed_at: s.closedAt || undefined,
+    total_sales: Number(s.totalSales),
+    status: s.closedAt ? 'closed' : 'open',
+});
+
+/**
+ * Open a new POS session via backend
+ * POST /api/sessions/open
+ */
+export const openSessionBackendApi = async (terminalId: string): Promise<OpenSessionResponse> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/sessions/open`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ terminalId }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: data.message || 'Failed to open session',
+            };
+        }
+
+        return {
+            success: true,
+            session: mapBackendSession(data.session),
+        };
+    } catch (error) {
+        console.error('Open session error:', error);
+        return {
+            success: false,
+            error: 'Network error. Please try again.',
+        };
+    }
+};
+
+/**
+ * Close an existing POS session via backend
+ * POST /api/sessions/:id/close
+ */
+export const closeSessionBackendApi = async (sessionId: string): Promise<CloseSessionResponse> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/sessions/${encodeURIComponent(sessionId)}/close`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: data.message || 'Failed to close session',
+            };
+        }
+
+        return {
+            success: true,
+            session: mapBackendSession(data.session),
+        };
+    } catch (error) {
+        console.error('Close session error:', error);
+        return {
+            success: false,
+            error: 'Network error. Please try again.',
+        };
+    }
+};
+
+/**
  * Clear all mock sessions (for testing)
  */
 export const clearMockSessions = (): void => {
     mockSessions = [];
 };
-
