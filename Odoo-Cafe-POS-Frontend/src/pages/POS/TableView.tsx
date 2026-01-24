@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutGrid, Clock, CalendarCheck, Home, Settings, LogOut } from 'lucide-react';
+import { LayoutGrid, Clock, CalendarCheck, Home, Settings, ArrowLeft } from 'lucide-react';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import TableCard from '../../components/tables/TableCard';
 import { getFloors, getTablesByFloor, getFloorStats, type Floor, type Table } from '../../api/tables.api';
@@ -10,7 +10,7 @@ import './POS.css';
 
 const TableView = () => {
     const navigate = useNavigate();
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
 
     const [floors, setFloors] = useState<Floor[]>([]);
     const [activeFloorId, setActiveFloorId] = useState<string>('');
@@ -51,9 +51,8 @@ const TableView = () => {
         navigate(`/pos/order/${table.id}`);
     };
 
-    const handleLogout = () => {
-        logout();
-        navigate('/login');
+    const handleBackToDashboard = () => {
+        navigate('/dashboard');
     };
 
     const getInitials = (name: string) => {
@@ -85,8 +84,8 @@ const TableView = () => {
                     </button>
                 </nav>
 
-                <button className="pos-sidebar__item" title="Logout" onClick={handleLogout}>
-                    <LogOut size={22} />
+                <button className="pos-sidebar__item" title="Back to Dashboard" onClick={handleBackToDashboard}>
+                    <ArrowLeft size={22} />
                 </button>
             </aside>
 

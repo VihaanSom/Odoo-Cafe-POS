@@ -1,37 +1,66 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './store/auth.store';
+import { SessionProvider } from './store/session.store';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
+import Dashboard from './pages/Dashboard/Dashboard';
 import TableView from './pages/POS/TableView';
 import OrderView from './pages/POS/OrderView';
+
+// Admin Pages
+import Products from './pages/Inventory/Products';
+import ProductList from './pages/Inventory/ProductList';
+import ProductForm from './pages/Inventory/ProductForm';
+import Categories from './pages/Inventory/Categories';
+import Orders from './pages/Sales/Orders';
+import Customers from './pages/Sales/Customers';
+import Payments from './pages/Sales/Payments';
+import FloorEditor from './pages/Floors/FloorEditor';
+import Settings from './pages/Settings/Settings';
+
 import './styles/globals.css';
 
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+      <SessionProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Auth Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
 
-          {/* POS Routes */}
-          <Route path="/pos" element={<TableView />} />
-          <Route path="/pos/tables" element={<TableView />} />
-          <Route path="/pos/order/:tableId" element={<OrderView />} />
+            {/* Dashboard */}
+            <Route path="/dashboard" element={<Dashboard />} />
 
-          {/* Dashboard redirects to POS */}
-          <Route path="/dashboard" element={<Navigate to="/pos" replace />} />
+            {/* Admin/Settings Routes */}
+            <Route path="/dashboard/products" element={<ProductList />} />
+            <Route path="/dashboard/products/new" element={<ProductForm />} />
+            <Route path="/dashboard/products/:productId" element={<ProductForm />} />
+            <Route path="/dashboard/products-old" element={<Products />} />
+            <Route path="/dashboard/categories" element={<Categories />} />
+            <Route path="/dashboard/orders" element={<Orders />} />
+            <Route path="/dashboard/customers" element={<Customers />} />
+            <Route path="/dashboard/payments" element={<Payments />} />
+            <Route path="/dashboard/floors" element={<FloorEditor />} />
+            <Route path="/dashboard/settings" element={<Settings />} />
 
-          {/* Default redirect to login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+            {/* POS Routes */}
+            <Route path="/pos" element={<TableView />} />
+            <Route path="/pos/tables" element={<TableView />} />
+            <Route path="/pos/order/:tableId" element={<OrderView />} />
 
-          {/* Catch all - redirect to login */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Default redirect to login */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+
+            {/* Catch all - redirect to login */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </SessionProvider>
     </AuthProvider>
   );
 }
 
 export default App;
+
