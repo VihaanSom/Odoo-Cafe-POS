@@ -293,7 +293,7 @@ export const getActiveOrderByTableApi = async (tableId: string): Promise<OrderRe
         }
 
         // Map backend response to frontend Order interface
-        const backendOrder = data;
+        const backendOrder = data.order;
         const order: Order = {
             id: backendOrder.id,
             branch_id: backendOrder.branchId,

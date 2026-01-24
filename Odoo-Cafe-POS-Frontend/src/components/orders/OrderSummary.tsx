@@ -6,8 +6,10 @@ import { useSession } from '../../store/session.store';
 import {
     createOrderBackendApi,
     sendToKitchenBackendApi,
+    getActiveOrderByTableApi,
     type CreateOrderBackendRequest
 } from '../../api/orders.api';
+import { processPaymentBackendApi, generateReceiptBackendApi, type PaymentMethod } from '../../api/payments.api';
 
 interface OrderSummaryProps {
     tableNumber: string;
@@ -30,14 +32,128 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
     const { session } = useSession();
     const [isLoading, setIsLoading] = useState(false);
     const [orderError, setOrderError] = useState<string | null>(null);
+    const [showPayment, setShowPayment] = useState(false);
+    const [paymentAmount, setPaymentAmount] = useState(0);
+    const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+    const [receiptData, setReceiptData] = useState<any>(null);
 
-    const formatPrice = (price: number) => {
-        return `₹${price.toFixed(2)}`;
+    const formatPrice = (price: number | string | undefined | null) => {
+        const numPrice = typeof price === 'string' ? parseFloat(price) : Number(price);
+        if (isNaN(numPrice)) return '₹0.00';
+        return `₹${numPrice.toFixed(2)}`;
     };
 
-    const handlePay = () => {
-        alert(`Processing payment of ${formatPrice(cartTotal)} for ${tableNumber}`);
-        // In a real app, this would navigate to payment screen
+    const initiatePayment = async () => {
+        if (!session) {
+            setOrderError('No active session.');
+            return;
+        }
+
+        setOrderError(null);
+        setIsLoading(true);
+        setReceiptData(null); // Reset receipt
+
+        try {
+            // Scene 1: Cart has items -> Create Order then Pay
+            if (cart.length > 0) {
+                if (!branchId) {
+                    setOrderError('Branch info missing. Refresh page.');
+                    setIsLoading(false);
+                    return;
+                }
+
+                // We'll create the order first
+                // Note: In a real flow, you might want to confirm before creating
+                const orderData: CreateOrderBackendRequest = {
+                    branchId: branchId,
+                    sessionId: session.id,
+                    orderType: 'DINE_IN',
+                    tableId: tableId,
+                    items: cart.map(item => ({
+                        productId: item.productId,
+                        quantity: item.quantity,
+                    })),
+                };
+
+                const createResult = await createOrderBackendApi(orderData);
+                if (!createResult.success || !createResult.order) {
+                    setOrderError(createResult.error || 'Failed to create order');
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Send to kitchen too
+                await sendToKitchenBackendApi(createResult.order.id);
+
+                setActiveOrderId(createResult.order.id);
+                setPaymentAmount(createResult.order.total_amount);
+                setShowPayment(true);
+                clearCart(); // Clear cart as order is created
+            }
+            // Scene 2: Cart empty -> Pay for existing active order
+            else {
+                const activeOrderResult = await getActiveOrderByTableApi(tableId);
+
+                if (!activeOrderResult.success || !activeOrderResult.order) {
+                    setOrderError('No active order to pay for this table.');
+                    setIsLoading(false);
+                    return;
+                }
+
+                if (activeOrderResult.order.status === 'COMPLETED') {
+                    setOrderError('This order is already paid.');
+                    setIsLoading(false);
+                    return;
+                }
+
+                setActiveOrderId(activeOrderResult.order.id);
+                setPaymentAmount(activeOrderResult.order.total_amount);
+                setShowPayment(true);
+            }
+        } catch (error) {
+            console.error('Payment initiation error:', error);
+            setOrderError('Failed to initiate payment.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const processPayment = async (method: PaymentMethod) => {
+        if (!activeOrderId) return;
+
+        setIsLoading(true);
+        try {
+            const result = await processPaymentBackendApi({
+                orderId: activeOrderId,
+                amount: paymentAmount,
+                method: method,
+                transactionReference: method === 'CASH' ? undefined : `REF-${Date.now()}`
+            });
+
+            if (result.success) {
+                // Fetch receipt
+                const receipt = await generateReceiptBackendApi(activeOrderId);
+                if (receipt) {
+                    setReceiptData(receipt);
+                } else {
+                    alert('Payment successful, but failed to load receipt.');
+                    setShowPayment(false);
+                    setActiveOrderId(null);
+                }
+            } else {
+                setOrderError(result.error || 'Payment failed');
+            }
+        } catch (error) {
+            setOrderError('Payment processing error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleCloseReceipt = () => {
+        setReceiptData(null);
+        setShowPayment(false);
+        setActiveOrderId(null);
     };
 
     const handlePlaceOrder = async () => {
@@ -100,6 +216,85 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
     };
 
     const MAX_QUANTITY = 99;
+
+    if (showPayment) {
+        return (
+            <aside className="order-summary">
+                <div className="order-summary__header">
+                    <h2 style={{ margin: 0 }}>{receiptData ? 'Receipt' : 'Payment'}</h2>
+                    <button onClick={() => setShowPayment(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+                </div>
+
+                {receiptData ? (
+                    <div style={{ padding: '1rem', overflowY: 'auto', maxHeight: '80vh', textAlign: 'left', background: 'white', color: 'black', margin: '1rem', borderRadius: '4px' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '1rem', borderBottom: '1px dashed #ccc', paddingBottom: '0.5rem' }}>
+                            <h3 style={{ margin: 0 }}>Odoo Cafe</h3>
+                            <p style={{ margin: 0, fontSize: '0.8rem' }}>{receiptData.date}</p>
+                            <p style={{ margin: 0, fontSize: '0.8rem' }}>Order: {receiptData.receiptNumber}</p>
+                            <p style={{ margin: 0, fontSize: '0.8rem' }}>Table: {receiptData.table}</p>
+                        </div>
+
+                        <div style={{ marginBottom: '1rem' }}>
+                            {receiptData.items.map((item: any, i: number) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '0.2rem' }}>
+                                    <span>{item.qty}x {item.name}</span>
+                                    <span>{formatPrice(item.total)}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ borderTop: '1px dashed #ccc', paddingTop: '0.5rem', marginBottom: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                                <span>Total</span>
+                                <span>{formatPrice(receiptData.totalAmount)}</span>
+                            </div>
+                        </div>
+
+                        <div style={{ textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.8rem' }}>Thank you for visiting!</p>
+                            <button
+                                className="order-summary__pay-btn"
+                                onClick={handleCloseReceipt}
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ padding: '2rem', textAlign: 'center' }}>
+                        <h3 style={{ fontSize: '2rem', marginBottom: '2rem' }}>{formatPrice(paymentAmount)}</h3>
+                        <div style={{ display: 'grid', gap: '1rem' }}>
+                            <button
+                                className="order-summary__pay-btn"
+                                onClick={() => processPayment('CASH')}
+                                disabled={isLoading}
+                            >
+                                CASH
+                            </button>
+                            <button
+                                className="order-summary__pay-btn"
+                                onClick={() => processPayment('UPI')}
+                                style={{ background: '#10B981' }}
+                                disabled={isLoading}
+                            >
+                                UPI
+                            </button>
+                            <button
+                                className="order-summary__pay-btn"
+                                onClick={() => processPayment('CARD')}
+                                style={{ background: '#6366F1' }}
+                                disabled={isLoading}
+                            >
+                                CARD
+                            </button>
+                        </div>
+                        {isLoading && <p>Processing...</p>}
+                        {orderError && <p style={{ color: 'red', marginTop: '1rem' }}>{orderError}</p>}
+                    </div>
+                )}
+            </aside>
+        );
+    }
 
     return (
         <aside className="order-summary">
@@ -206,11 +401,11 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
 
                 <button
                     className="order-summary__pay-btn"
-                    disabled={cart.length === 0}
-                    onClick={handlePay}
+                    disabled={isLoading}
+                    onClick={initiatePayment}
                 >
                     <CreditCard size={20} />
-                    Pay {formatPrice(cartTotal)}
+                    {cart.length > 0 ? `Pay ${formatPrice(cartTotal)}` : 'Pay Bill'}
                 </button>
 
                 {cart.length > 0 && (

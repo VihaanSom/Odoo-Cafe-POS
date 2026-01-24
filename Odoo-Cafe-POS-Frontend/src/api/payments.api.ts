@@ -121,3 +121,95 @@ export const getPaymentsBySession = async (_sessionId: string): Promise<Payment[
 export const clearMockPayments = (): void => {
     mockPayments = [];
 };
+
+// ============================================
+// REAL BACKEND API FUNCTIONS
+// ============================================
+
+const API_BASE_URL = 'http://localhost:5000/api';
+
+const getAuthHeaders = (): HeadersInit => {
+    const token = localStorage.getItem('pos_auth_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
+
+export interface ProcessPaymentBackendRequest {
+    orderId: string;
+    amount: number;
+    method: PaymentMethod;
+    transactionReference?: string;
+}
+
+/**
+ * Process a payment via backend
+ * POST /api/payments
+ */
+export const processPaymentBackendApi = async (data: ProcessPaymentBackendRequest): Promise<PaymentResponse> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/payments`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: responseData.message || 'Failed to process payment',
+            };
+        }
+
+        const backendPayment = responseData.payment;
+
+        // Map backend payment to frontend interface
+        const payment: Payment = {
+            id: backendPayment.id,
+            order_id: backendPayment.orderId,
+            method: backendPayment.method,
+            amount: Number(backendPayment.amount),
+            status: backendPayment.status,
+            transaction_reference: backendPayment.transactionReference,
+            created_at: backendPayment.createdAt,
+        };
+
+        return {
+            success: true,
+            payment,
+        };
+    } catch (error) {
+        console.error('Process payment error:', error);
+        return {
+            success: false,
+            error: 'Network error. Please try again.',
+        };
+    }
+};
+
+/**
+ * Generate receipt for an order
+ * POST /api/payments/orders/:id/receipt
+ */
+export const generateReceiptBackendApi = async (orderId: string): Promise<any> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/payments/orders/${encodeURIComponent(orderId)}/receipt`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to generate receipt');
+        }
+
+        return data.receipt;
+    } catch (error) {
+        console.error('Generate receipt error:', error);
+        return null;
+    }
+};
