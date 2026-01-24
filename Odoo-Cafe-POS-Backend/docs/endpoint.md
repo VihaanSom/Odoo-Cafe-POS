@@ -311,7 +311,145 @@ Authorization: Bearer <token>
    ```
 4. Verify response contains the new terminal ID
 
+
 ### Step 3: Verify Terminal List
 1. **GET** `http://localhost:5000/api/terminals`
 2. Headers: `Authorization: Bearer <token>`
 3. Check if "Terrace Bar" appears in the list
+
+---
+
+## Order Management API Endpoints (Phase 2)
+
+Base URL: `http://localhost:5000/api`
+
+### 1. Create Order (Place Order)
+
+**POST** `/api/orders`
+
+This endpoint is used when the user clicks **"Place Order"**. It supports two modes:
+1.  **Empty Order (Lock Table)**: Send without items to just lock the table.
+2.  **Full Order (Local Cart)**: Send with `items` array to creation order, lock table, and add items in one go.
+
+**Headers:**
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body (DINE_IN with Items):**
+```json
+{
+  "branchId": "<branch-uuid>",
+  "sessionId": "<session-uuid>",
+  "orderType": "DINE_IN",
+  "tableId": "<table-uuid>",
+  "items": [
+      { "productId": "<product-uuid-1>", "quantity": 1 },
+      { "productId": "<product-uuid-2>", "quantity": 2 }
+  ]
+}
+```
+
+**Request Body (TAKEAWAY):**
+```json
+{
+  "branchId": "<branch-uuid>",
+  "sessionId": "<session-uuid>",
+  "orderType": "TAKEAWAY",
+  "items": [ ... ]
+}
+```
+
+**Success Response (201):**
+```json
+{
+  "order": {
+    "id": "order-uuid",
+    "status": "CREATED",
+    "totalAmount": "450.00",
+    "table": { "status": "OCCUPIED" },
+    "orderItems": [ ... ]
+  }
+}
+```
+
+### 2. Add Items to Existing Order (Batch)
+
+**POST** `/api/orders/:id/items`
+
+Used to add more items to an open order.
+
+**Body:**
+```json
+{
+  "items": [
+      { "productId": "<product-uuid>", "quantity": 1 }
+  ]
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "createdItems": [ ... ],
+  "order": {
+    "totalAmount": "550.00" // Updated total
+  }
+}
+```
+
+### 3. Send to Kitchen
+
+**POST** `/api/orders/:id/send`
+
+**Success Response (200):**
+```json
+{
+  "message": "Order sent to kitchen successfully"
+}
+```
+
+---
+
+## Postman Testing Steps (Order Flow)
+
+### Step 1: Create Products (Prerequisite)
+Ensure you have products in your DB (via Prisma Studio). Copy the `id` of a product (e.g., "Cappuccino").
+
+### Step 2: Place Order (Local Cart Style)
+1. **Method**: `POST`
+2. **URL**: `http://localhost:5000/api/orders`
+3. **Body**:
+   ```json
+   {
+     "branchId": "...", 
+     "sessionId": "...", 
+     "orderType": "DINE_IN", 
+     "tableId": "...",
+     "items": [
+       { "productId": "<product-id>", "quantity": 2 }
+     ]
+   }
+   ```
+4. **Verify**: Order is created, total is correct, and table status is `OCCUPIED`.
+
+### Step 3: Add More Items
+1. **Method**: `POST`
+2. **URL**: `http://localhost:5000/api/orders/<order-id>/items`
+3. **Body**:
+   ```json
+   {
+     "items": [
+       { "productId": "<another-product-id>", "quantity": 1 }
+     ]
+   }
+   ```
+4. **Verify**: New items added and total updated.
+
+### Step 4: Send to Kitchen
+1. **Method**: `POST`
+2. **URL**: `http://localhost:5000/api/orders/<order-id>/send`
+3. **Body**: `{}`
+4. **Verify**: Success message received.
+

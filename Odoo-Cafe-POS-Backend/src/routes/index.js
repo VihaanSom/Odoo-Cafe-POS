@@ -13,7 +13,7 @@ const authRoutes = require('./auth.routes');
 // Dev B routes
 const sessionRoutes = require('./session.routes');
 const terminalRoutes = require('./terminal.routes');
-// const orderRoutes = require('./order.routes');
+const orderRoutes = require('./order.routes');
 // const paymentRoutes = require('./payment.routes');
 
 const router = express.Router();
@@ -33,7 +33,7 @@ router.use('/auth', authRoutes);
 // Dev B: Orders & Payments
 router.use('/sessions', sessionRoutes);
 router.use('/terminals', terminalRoutes);
-// router.use('/orders', orderRoutes);
+router.use('/orders', orderRoutes);
 // router.use('/payments', paymentRoutes);
 
 module.exports = router;
