@@ -164,3 +164,141 @@ export const getTerminalById = async (terminalId: string): Promise<Terminal | nu
         }, 100);
     });
 };
+
+// ============================================
+// REAL BACKEND API FUNCTIONS
+// ============================================
+
+const API_BASE_URL = 'http://localhost:5000/api';
+
+const getAuthHeaders = (): HeadersInit => {
+    const token = localStorage.getItem('pos_auth_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
+
+/**
+ * Backend Terminal interface (camelCase)
+ */
+interface BackendTerminal {
+    id: string;
+    terminalName: string;
+    branchId?: string;
+    userId?: string;
+    createdAt?: string;
+    branch?: {
+        id: string;
+        name: string;
+    };
+    user?: {
+        id: string;
+        name: string;
+        email: string;
+    };
+}
+
+/**
+ * Map backend terminal to frontend Terminal interface
+ */
+const mapBackendTerminal = (t: BackendTerminal): Terminal => ({
+    id: t.id,
+    branch_id: t.branchId || '',
+    terminal_name: t.terminalName,
+    user_id: t.userId,
+    created_at: t.createdAt,
+});
+
+/**
+ * Get all terminals from backend
+ * GET /api/terminals
+ */
+export const getTerminalsApi = async (): Promise<Terminal[]> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/terminals`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch terminals');
+            return [];
+        }
+
+        const data = await response.json();
+        // Backend returns { terminals: [...] }
+        const terminals: BackendTerminal[] = data.terminals || [];
+
+        return terminals.map(mapBackendTerminal);
+    } catch (error) {
+        console.error('Get terminals error:', error);
+        return [];
+    }
+};
+
+/**
+ * Get terminal by ID from backend
+ * GET /api/terminals/:id
+ */
+export const getTerminalByIdApi = async (terminalId: string): Promise<Terminal | null> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/terminals/${encodeURIComponent(terminalId)}`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const data: BackendTerminal = await response.json();
+        return mapBackendTerminal(data);
+    } catch (error) {
+        console.error('Get terminal by ID error:', error);
+        return null;
+    }
+};
+
+/**
+ * Create a new terminal via backend
+ * POST /api/terminals
+ */
+export const createTerminalApi = async (
+    terminalName: string,
+    branchId?: string,
+    userId?: string
+): Promise<TerminalResponse> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/terminals`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                terminalName,
+                branchId,
+                userId,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: data.message || 'Failed to create terminal',
+            };
+        }
+
+        return {
+            success: true,
+            terminal: mapBackendTerminal(data),
+        };
+    } catch (error) {
+        console.error('Create terminal error:', error);
+        return {
+            success: false,
+            error: 'Network error. Please try again.',
+        };
+    }
+};
+
