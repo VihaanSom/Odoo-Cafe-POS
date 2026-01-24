@@ -1,7 +1,9 @@
 /**
- * Mock Authentication API
- * Simulates backend authentication with 1 second delay
+ * Authentication API
+ * Connects to the Express backend at /api/auth
  */
+
+const API_BASE_URL = 'http://localhost:5000/api';
 
 export interface LoginCredentials {
     email: string;
@@ -9,102 +11,124 @@ export interface LoginCredentials {
 }
 
 export interface SignupCredentials {
-    restaurantName: string;
+    restaurantName?: string;
     fullName: string;
     email: string;
     password: string;
 }
 
+export interface User {
+    id: string;
+    email: string;
+    name: string;
+    createdAt?: string;
+}
+
 export interface AuthResponse {
     success: boolean;
     token?: string;
-    user?: {
-        id: string;
-        email: string;
-        fullName: string;
-        restaurantName: string;
-    };
+    user?: User;
     error?: string;
 }
 
 /**
- * Simulates a login API call
- * Returns a fake token after 1 second delay
+ * Login API call
+ * POST /api/auth/login
  */
 export const loginApi = async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            // Mock validation - in real app, this would be server-side
-            if (!credentials.email || !credentials.password) {
-                resolve({
-                    success: false,
-                    error: 'Email and password are required',
-                });
-                return;
-            }
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: credentials.email,
+                password: credentials.password,
+            }),
+        });
 
-            // Simulate successful login
-            resolve({
-                success: true,
-                token: `mock-jwt-token-${Date.now()}`,
-                user: {
-                    id: 'usr_' + Math.random().toString(36).substr(2, 9),
-                    email: credentials.email,
-                    fullName: 'Restaurant Owner',
-                    restaurantName: 'My Restaurant',
-                },
-            });
-        }, 1000);
-    });
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: data.message || 'Login failed. Please check your credentials.',
+            };
+        }
+
+        return {
+            success: true,
+            token: data.token,
+            user: data.user,
+        };
+    } catch (error) {
+        console.error('Login API error:', error);
+        return {
+            success: false,
+            error: 'Unable to connect to server. Please try again later.',
+        };
+    }
 };
 
 /**
- * Simulates a signup API call
- * Returns a fake token after 1 second delay
+ * Signup API call
+ * POST /api/auth/signup
  */
 export const signupApi = async (credentials: SignupCredentials): Promise<AuthResponse> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            // Mock validation
-            if (!credentials.email || !credentials.password || !credentials.fullName || !credentials.restaurantName) {
-                resolve({
-                    success: false,
-                    error: 'All fields are required',
-                });
-                return;
-            }
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: credentials.fullName, // Map fullName to name for backend
+                email: credentials.email,
+                password: credentials.password,
+            }),
+        });
 
-            if (credentials.password.length < 6) {
-                resolve({
-                    success: false,
-                    error: 'Password must be at least 6 characters',
-                });
-                return;
-            }
+        const data = await response.json();
 
-            // Simulate successful signup
-            resolve({
-                success: true,
-                token: `mock-jwt-token-${Date.now()}`,
-                user: {
-                    id: 'usr_' + Math.random().toString(36).substr(2, 9),
-                    email: credentials.email,
-                    fullName: credentials.fullName,
-                    restaurantName: credentials.restaurantName,
-                },
-            });
-        }, 1000);
-    });
+        if (!response.ok) {
+            return {
+                success: false,
+                error: data.message || 'Signup failed. Please try again.',
+            };
+        }
+
+        return {
+            success: true,
+            token: data.token,
+            user: data.user,
+        };
+    } catch (error) {
+        console.error('Signup API error:', error);
+        return {
+            success: false,
+            error: 'Unable to connect to server. Please try again later.',
+        };
+    }
 };
 
 /**
- * Simulates token validation
+ * Validate token with backend
+ * GET /api/auth/me
  */
 export const validateTokenApi = async (token: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            // Mock validation - any token starting with "mock-jwt-token" is valid
-            resolve(token.startsWith('mock-jwt-token'));
-        }, 200);
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        return response.ok;
+    } catch (error) {
+        console.error('Token validation error:', error);
+        return false;
+    }
 };
