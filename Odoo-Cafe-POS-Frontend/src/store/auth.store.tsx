@@ -1,15 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { loginApi, signupApi, LoginCredentials, SignupCredentials, AuthResponse } from '../api/auth.api';
-
-/**
- * User interface
- */
-interface User {
-    id: string;
-    email: string;
-    fullName: string;
-    restaurantName: string;
-}
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { loginApi, signupApi } from '../api/auth.api';
+import type { LoginCredentials, SignupCredentials, AuthResponse, User } from '../api/auth.api';
 
 /**
  * Auth context state interface
