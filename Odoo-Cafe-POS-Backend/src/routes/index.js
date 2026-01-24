@@ -5,8 +5,8 @@ const authRoutes = require('./auth.routes');
 const branchRoutes = require('./branch.routes');
 const categoryRoutes = require('./category.routes');
 const productRoutes = require('./product.routes');
-// const floorRoutes = require('./floor.routes');
-// const tableRoutes = require('./table.routes');
+const floorRoutes = require('./floor.routes');
+const tableRoutes = require('./table.routes');
 // const kitchenRoutes = require('./kitchen.routes');
 // const reportRoutes = require('./report.routes');
 
@@ -24,8 +24,8 @@ router.use('/auth', authRoutes);
 router.use('/branches', branchRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/products', productRoutes);
-// router.use('/floors', floorRoutes);
-// router.use('/tables', tableRoutes);
+router.use('/floors', floorRoutes);
+router.use('/tables', tableRoutes);
 // router.use('/kitchen', kitchenRoutes);
 // router.use('/reports', reportRoutes);
 
