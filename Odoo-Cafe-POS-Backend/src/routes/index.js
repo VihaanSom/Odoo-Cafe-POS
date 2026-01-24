@@ -10,10 +10,11 @@ const tableRoutes = require('./table.routes');
 const kitchenRoutes = require('./kitchen.routes');
 const reportRoutes = require('./report.routes');
 
-// Dev B routes (uncomment when ready)
-// const sessionRoutes = require('./session.routes');
-// const orderRoutes = require('./order.routes');
-// const paymentRoutes = require('./payment.routes');
+// Dev B routes
+const sessionRoutes = require('./session.routes');
+const terminalRoutes = require('./terminal.routes');
+const orderRoutes = require('./order.routes');
+const paymentRoutes = require('./payment.routes');
 
 const router = express.Router();
 
@@ -30,8 +31,9 @@ router.use('/kitchen', kitchenRoutes);
 router.use('/reports', reportRoutes);
 
 // Dev B: Orders & Payments
-// router.use('/sessions', sessionRoutes);
-// router.use('/orders', orderRoutes);
-// router.use('/payments', paymentRoutes);
+router.use('/sessions', sessionRoutes);
+router.use('/terminals', terminalRoutes);
+router.use('/orders', orderRoutes);
+router.use('/payments', paymentRoutes);
 
 module.exports = router;
