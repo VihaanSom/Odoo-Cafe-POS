@@ -9,13 +9,15 @@ import { ArrowLeft, Plus, Trash2, Save, Upload } from 'lucide-react';
 import {
     type Product,
     type PriceRule,
-    type Category,
     getProductById,
-    getCategories,
     createProduct,
     updateProduct,
     TAX_OPTIONS,
 } from '../../api/products.api';
+import {
+    type Category,
+    getCategories,
+} from '../../api/categories.api';
 
 type TabType = 'general' | 'variants';
 

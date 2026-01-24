@@ -3,11 +3,7 @@
  * Categories and Products for the POS with Advanced Pricing
  */
 
-export interface Category {
-    id: string;
-    name: string;
-    icon: string;
-}
+
 
 export interface PriceRule {
     minQty: number;
@@ -40,14 +36,7 @@ export const TAX_OPTIONS = [
     { value: 'vat_15', label: 'VAT 15%' },
 ];
 
-// Mock categories
-const categories: Category[] = [
-    { id: 'cat-1', name: 'Starters', icon: '🥗' },
-    { id: 'cat-2', name: 'Main Course', icon: '🍛' },
-    { id: 'cat-3', name: 'Drinks', icon: '🍹' },
-    { id: 'cat-4', name: 'Desserts', icon: '🍰' },
-    { id: 'cat-5', name: 'Sides', icon: '🍟' },
-];
+
 
 // Mock products with extended fields
 const products: Product[] = [
@@ -93,16 +82,7 @@ const products: Product[] = [
 // In-memory store for mutations
 let productStore = [...products];
 
-/**
- * Get all categories
- */
-export const getCategories = async (): Promise<Category[]> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(categories);
-        }, 200);
-    });
-};
+
 
 /**
  * Get products by category

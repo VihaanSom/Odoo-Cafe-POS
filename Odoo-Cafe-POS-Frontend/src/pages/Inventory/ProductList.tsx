@@ -8,12 +8,14 @@ import { motion } from 'framer-motion';
 import { Plus, Archive, Trash2, X, Package, ArrowLeft } from 'lucide-react';
 import {
     type Product,
-    type Category,
     getAllProducts,
-    getCategories,
     archiveProducts,
     deleteProducts,
 } from '../../api/products.api';
+import {
+    type Category,
+    getCategories,
+} from '../../api/categories.api';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 const ProductList = () => {
