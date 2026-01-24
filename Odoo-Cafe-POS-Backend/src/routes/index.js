@@ -10,8 +10,9 @@ const authRoutes = require('./auth.routes');
 // const kitchenRoutes = require('./kitchen.routes');
 // const reportRoutes = require('./report.routes');
 
-// Dev B routes (uncomment when ready)
-// const sessionRoutes = require('./session.routes');
+// Dev B routes
+const sessionRoutes = require('./session.routes');
+const terminalRoutes = require('./terminal.routes');
 // const orderRoutes = require('./order.routes');
 // const paymentRoutes = require('./payment.routes');
 
@@ -30,7 +31,8 @@ router.use('/auth', authRoutes);
 // router.use('/reports', reportRoutes);
 
 // Dev B: Orders & Payments
-// router.use('/sessions', sessionRoutes);
+router.use('/sessions', sessionRoutes);
+router.use('/terminals', terminalRoutes);
 // router.use('/orders', orderRoutes);
 // router.use('/payments', paymentRoutes);
 
