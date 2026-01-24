@@ -207,9 +207,35 @@ const getOrderById = async (orderId) => {
     return order;
 };
 
+/**
+ * Get Active Order for a Table (DINE_IN)
+ */
+const getActiveOrderByTable = async (tableId) => {
+    const order = await prisma.order.findFirst({
+        where: {
+            tableId,
+            orderType: ORDER_TYPE.DINE_IN,
+            status: {
+                not: ORDER_STATUS.COMPLETED
+            }
+        },
+        include: {
+            orderItems: {
+                include: {
+                    product: true
+                }
+            },
+            table: true
+        }
+    });
+
+    return order;
+};
+
 module.exports = {
     createOrder,
     addOrderItems,
     sendToKitchen,
-    getOrderById
+    getOrderById,
+    getActiveOrderByTable
 };

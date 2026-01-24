@@ -451,5 +451,99 @@ Ensure you have products in your DB (via Prisma Studio). Copy the `id` of a prod
 1. **Method**: `POST`
 2. **URL**: `http://localhost:5000/api/orders/<order-id>/send`
 3. **Body**: `{}`
-4. **Verify**: Success message received.
+
+---
+
+## Payment & Receipts API Endpoints (Phase 3)
+
+### 1. View Active Bill (for Table)
+
+**GET** `/api/orders/table/:tableId/active`
+
+Fetches the currently open order for a specific table. Used when user clicks "View Bill" or "Checkout" on a table.
+
+**Success Response (200):**
+```json
+{
+  "order": {
+      "id": "order-uuid",
+      "status": "CREATED",
+      "totalAmount": "550.00",
+      "orderItems": [ ... ]
+  }
+}
+```
+
+### 2. Process Payment
+
+**POST** `/api/payments`
+
+Completes the order and frees the table.
+
+**Body:**
+```json
+{
+  "orderId": "<order-uuid>",
+  "amount": 550.00,
+  "method": "CASH", // CASH, CARD, UPI
+  "transactionReference": "OPTIONAL-REF-123"
+}
+```
+
+**Success Response (201):**
+```json
+{
+  "payment": {
+      "id": "payment-uuid",
+      "status": "COMPLETED"
+  }
+}
+```
+
+### 3. Generate Receipt
+
+**POST** `/api/orders/:id/receipt`
+
+**Success Response (200):**
+```json
+{
+  "receipt": {
+      "receiptNumber": "RCPT-123456789",
+      "totalAmount": "550.00",
+      "items": [ ... ],
+      "payments": [ ... ]
+  }
+}
+```
+
+---
+
+## Postman Testing Steps (Payment Flow)
+
+### Step 1: Create Order & Add Items (From Phase 2)
+Ensure you have an active order on a table (Table ID is needed).
+
+### Step 2: View Bill (By Table ID)
+1. **Method**: `GET`
+2. **URL**: `http://localhost:5000/api/orders/table/<table-id>/active`
+3. **Verify**: Returns the correct Order ID and Total.
+
+### Step 3: Pay for Order
+1. **Method**: `POST`
+2. **URL**: `http://localhost:5000/api/payments`
+3. **Body**:
+   ```json
+   {
+     "orderId": "<order-id>",
+     "amount": 550,
+     "method": "CASH"
+   }
+   ```
+4. **Verify**: Payment created, success message.
+5. **Check DB**: Table status should be `FREE` now.
+
+### Step 4: Get Receipt
+1. **Method**: `POST`
+2. **URL**: `http://localhost:5000/api/orders/<order-id>/receipt`
+3. **Verify**: Full receipt details returned.
 

@@ -10,6 +10,9 @@ router.use(authMiddleware);
 // Create new order (can include initial items)
 router.post('/', orderController.createOrder);
 
+// Get active order for table (View Bill) - MUST be before /:id
+router.get('/table/:tableId/active', orderController.getActiveOrderByTable);
+
 // Get order details
 router.get('/:id', orderController.getOrderById);
 
@@ -18,5 +21,8 @@ router.post('/:id/items', orderController.addOrderItems);
 
 // Send to kitchen (Notification only)
 router.post('/:id/send', orderController.sendToKitchen);
+
+// Generate Receipt
+router.post('/:id/receipt', orderController.generateReceipt);
 
 module.exports = router;

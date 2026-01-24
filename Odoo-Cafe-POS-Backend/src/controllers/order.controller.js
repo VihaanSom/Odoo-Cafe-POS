@@ -1,4 +1,5 @@
 const orderService = require('../services/order.service');
+const paymentService = require('../services/payment.service');
 
 const createOrder = async (req, res, next) => {
     try {
@@ -48,9 +49,36 @@ const getOrderById = async (req, res, next) => {
     }
 };
 
+const getActiveOrderByTable = async (req, res, next) => {
+    try {
+        const { tableId } = req.params;
+        const order = await orderService.getActiveOrderByTable(tableId);
+
+        if (!order) {
+            return res.status(404).json({ message: 'No active order found for this table' });
+        }
+
+        res.json({ order });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const generateReceipt = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const receipt = await paymentService.generateReceipt(id);
+        res.json({ receipt });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createOrder,
     addOrderItems,
     sendToKitchen,
-    getOrderById
+    getOrderById,
+    getActiveOrderByTable,
+    generateReceipt
 };
