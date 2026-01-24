@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Trash2, Copy, Save, Edit2 } from 'lucide-react';
 import AdminPageLayout from '../../components/admin/AdminPageLayout';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import './FloorEditor.css';
 
 interface TableItem {
@@ -73,6 +74,9 @@ const FloorEditor = () => {
         seats: 4,
         resource: '',
     });
+
+    // Confirm dialog state
+    const [confirmOpen, setConfirmOpen] = useState(false);
 
     const activeFloor = floors.find(f => f.id === activeFloorId);
 
@@ -182,10 +186,12 @@ const FloorEditor = () => {
         setIsSaved(false);
     };
 
-    const handleBulkDelete = () => {
+    const handleBulkDeleteClick = () => {
         if (selectedIds.length === 0) return;
-        if (!confirm(`Delete ${selectedIds.length} table(s)?`)) return;
+        setConfirmOpen(true);
+    };
 
+    const handleBulkDeleteConfirm = () => {
         setFloors(prev => prev.map(floor =>
             floor.id === activeFloorId
                 ? { ...floor, tables: floor.tables.filter(t => !selectedIds.includes(t.id)) }
@@ -248,7 +254,7 @@ const FloorEditor = () => {
                                             <Copy size={14} />
                                             Duplicate
                                         </button>
-                                        <button className="action-btn action-btn--danger" onClick={handleBulkDelete}>
+                                        <button className="action-btn action-btn--danger" onClick={handleBulkDeleteClick}>
                                             <Trash2 size={14} />
                                             Delete
                                         </button>
@@ -689,6 +695,18 @@ const FloorEditor = () => {
                     }
                 }
             `}</style>
+
+            {/* Delete Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleBulkDeleteConfirm}
+                type="delete"
+                title="Delete Tables"
+                message={`Are you sure you want to delete ${selectedIds.length} table(s)? This action cannot be undone.`}
+                confirmLabel="Delete"
+                cancelLabel="Cancel"
+            />
         </AdminPageLayout>
     );
 };

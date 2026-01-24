@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, X, Receipt, Printer, Archive, Trash2 } from 'lucide-react';
 import AdminPageLayout from '../../components/admin/AdminPageLayout';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 interface OrderItem {
     name: string;
@@ -108,6 +109,10 @@ const Orders = () => {
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
+    // Confirm dialog state
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [confirmType, setConfirmType] = useState<'delete' | 'archive'>('delete');
+
     // Filter based on search
     const filteredOrders = orders.filter(order =>
         order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -132,18 +137,26 @@ const Orders = () => {
     };
 
     // Bulk actions
-    const handleArchive = () => {
+    const handleArchiveClick = () => {
         if (selectedIds.length === 0) return;
-        setOrders(prev => prev.map(o =>
-            selectedIds.includes(o.id) ? { ...o, status: 'ARCHIVED' as const } : o
-        ));
-        setSelectedIds([]);
+        setConfirmType('archive');
+        setConfirmOpen(true);
     };
 
-    const handleDelete = () => {
+    const handleDeleteClick = () => {
         if (selectedIds.length === 0) return;
-        if (!confirm(`Delete ${selectedIds.length} order(s)?`)) return;
-        setOrders(prev => prev.filter(o => !selectedIds.includes(o.id)));
+        setConfirmType('delete');
+        setConfirmOpen(true);
+    };
+
+    const handleConfirm = () => {
+        if (confirmType === 'archive') {
+            setOrders(prev => prev.map(o =>
+                selectedIds.includes(o.id) ? { ...o, status: 'ARCHIVED' as const } : o
+            ));
+        } else {
+            setOrders(prev => prev.filter(o => !selectedIds.includes(o.id)));
+        }
         setSelectedIds([]);
     };
 
@@ -178,11 +191,11 @@ const Orders = () => {
                         animate={{ opacity: 1, y: 0 }}
                     >
                         <span className="orders-actions__count">✕ {selectedIds.length} Selected</span>
-                        <button className="orders-actions__btn" onClick={handleArchive}>
+                        <button className="orders-actions__btn" onClick={handleArchiveClick}>
                             <Archive size={14} />
                             Archived
                         </button>
-                        <button className="orders-actions__btn orders-actions__btn--danger" onClick={handleDelete}>
+                        <button className="orders-actions__btn orders-actions__btn--danger" onClick={handleDeleteClick}>
                             <Trash2 size={14} />
                             Delete
                         </button>
@@ -410,6 +423,21 @@ const Orders = () => {
                     background: #B2DFDB !important;
                 }
             `}</style>
+
+            {/* Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleConfirm}
+                type={confirmType}
+                title={confirmType === 'delete' ? 'Delete Orders' : 'Archive Orders'}
+                message={confirmType === 'delete'
+                    ? `Are you sure you want to delete ${selectedIds.length} order(s)? This action cannot be undone.`
+                    : `Are you sure you want to archive ${selectedIds.length} order(s)?`
+                }
+                confirmLabel={confirmType === 'delete' ? 'Delete' : 'Archive'}
+                cancelLabel="Cancel"
+            />
         </AdminPageLayout>
     );
 };

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { Edit2, Trash2, X, FolderOpen, GripVertical } from 'lucide-react';
 import AdminPageLayout from '../../components/admin/AdminPageLayout';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 interface Category {
     id: string;
@@ -41,6 +42,10 @@ const Categories = () => {
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [formData, setFormData] = useState({ name: '', icon: '📁' });
 
+    // Confirm dialog state
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+
     const filteredCategories = categories.filter(category =>
         category.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -58,10 +63,16 @@ const Categories = () => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = (categoryId: string, e: React.MouseEvent) => {
+    const handleDeleteClick = (categoryId: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (confirm('Are you sure you want to delete this category?')) {
-            setCategories(categories.filter(c => c.id !== categoryId));
+        setDeleteId(categoryId);
+        setConfirmOpen(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (deleteId) {
+            setCategories(categories.filter(c => c.id !== deleteId));
+            setDeleteId(null);
         }
     };
 
@@ -164,7 +175,7 @@ const Categories = () => {
                                                 </button>
                                                 <button
                                                     className="admin-table__action-btn admin-table__action-btn--danger"
-                                                    onClick={(e) => handleDelete(category.id, e)}
+                                                    onClick={(e) => handleDeleteClick(category.id, e)}
                                                     title="Delete"
                                                 >
                                                     <Trash2 size={16} />
@@ -224,7 +235,7 @@ const Categories = () => {
                                             </button>
                                             <button
                                                 className="admin-table__action-btn admin-table__action-btn--danger"
-                                                onClick={(e) => handleDelete(category.id, e)}
+                                                onClick={(e) => handleDeleteClick(category.id, e)}
                                                 title="Delete"
                                             >
                                                 <Trash2 size={16} />
@@ -487,6 +498,18 @@ const Categories = () => {
                     }
                 }
             `}</style>
+
+            {/* Delete Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleDeleteConfirm}
+                type="delete"
+                title="Delete Category"
+                message="Are you sure you want to delete this category? This action cannot be undone."
+                confirmLabel="Delete"
+                cancelLabel="Cancel"
+            />
         </AdminPageLayout>
     );
 };
