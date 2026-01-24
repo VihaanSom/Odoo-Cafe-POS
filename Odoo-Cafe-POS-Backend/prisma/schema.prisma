@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TableStatus {
+  FREE
+  OCCUPIED
+  @@map("table_status")
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+  @@map("order_type")
+}
+
+enum OrderStatus {
+  CREATED
+  IN_PROGRESS
+  READY
+  COMPLETED
+  @@map("order_status")
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  UPI
+  @@map("payment_method")
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  @@map("payment_status")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  posTerminals PosTerminal[]
+  orders       Order[]
+
+  @@map("users")
+}
+
+model Branch {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  address   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  posTerminals    PosTerminal[]
+  floors          Floor[]
+  categories      Category[]
+  products        Product[]
+  orders          Order[]
+  paymentSettings PaymentSettings[]
+
+  @@map("branches")
+}
+
+model PosTerminal {
+  id           String   @id @default(uuid()) @db.Uuid
+  branchId     String?  @map("branch_id") @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
+  terminalName String   @map("terminal_name")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  branch      Branch?      @relation(fields: [branchId], references: [id])
+  user        User?        @relation(fields: [userId], references: [id])
+  posSessions PosSession[]
+
+  @@map("pos_terminals")
+}
+
+model PosSession {
+  id         String    @id @default(uuid()) @db.Uuid
+  terminalId String?   @map("terminal_id") @db.Uuid
+  openedAt   DateTime  @default(now()) @map("opened_at")
+  closedAt   DateTime? @map("closed_at")
+  totalSales Decimal   @default(0) @map("total_sales") @db.Decimal(12, 2)
+
+  terminal PosTerminal? @relation(fields: [terminalId], references: [id])
+  orders   Order[]
+
+  @@map("pos_sessions")
+}
+
+model Floor {
+  id       String @id @default(uuid()) @db.Uuid
+  branchId String? @map("branch_id") @db.Uuid
+  name     String
+
+  branch Branch? @relation(fields: [branchId], references: [id])
+  tables Table[]
+
+  @@map("floors")
+}
+
+model Table {
+  id          String      @id @default(uuid()) @db.Uuid
+  floorId     String?     @map("floor_id") @db.Uuid
+  tableNumber Int         @map("table_number")
+  status      TableStatus @default(FREE)
+
+  floor  Floor?  @relation(fields: [floorId], references: [id])
+  orders Order[]
+
+  @@map("tables")
+}
+
+model Category {
+  id       String @id @default(uuid()) @db.Uuid
+  branchId String? @map("branch_id") @db.Uuid
+  name     String
+
+  branch   Branch?   @relation(fields: [branchId], references: [id])
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id         String  @id @default(uuid()) @db.Uuid
+  branchId   String? @map("branch_id") @db.Uuid
+  categoryId String? @map("category_id") @db.Uuid
+  name       String
+  price      Decimal @db.Decimal(10, 2)
+  isActive   Boolean @default(true) @map("is_active")
+
+  branch     Branch?     @relation(fields: [branchId], references: [id])
+  category   Category?   @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+model Order {
+  id          String      @id @default(uuid()) @db.Uuid
+  branchId    String?     @map("branch_id") @db.Uuid
+  sessionId   String?     @map("session_id") @db.Uuid
+  tableId     String?     @map("table_id") @db.Uuid
+  createdBy   String?     @map("created_by") @db.Uuid
+  orderType   OrderType   @map("order_type")
+  status      OrderStatus @default(CREATED)
+  totalAmount Decimal     @default(0) @map("total_amount") @db.Decimal(12, 2)
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  branch    Branch?     @relation(fields: [branchId], references: [id])
+  session   PosSession? @relation(fields: [sessionId], references: [id])
+  table     Table?      @relation(fields: [tableId], references: [id])
+  creator   User?       @relation(fields: [createdBy], references: [id])
+  orderItems OrderItem[]
+  payments  Payment[]
+  receipts  Receipt[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String  @id @default(uuid()) @db.Uuid
+  orderId     String? @map("order_id") @db.Uuid
+  productId   String? @map("product_id") @db.Uuid
+  quantity    Int
+  priceAtTime Decimal @map("price_at_time") @db.Decimal(10, 2)
+
+  order   Order?   @relation(fields: [orderId], references: [id])
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model Payment {
+  id                   String        @id @default(uuid()) @db.Uuid
+  orderId              String?       @map("order_id") @db.Uuid
+  method               PaymentMethod
+  amount               Decimal       @db.Decimal(12, 2)
+  status               PaymentStatus @default(PENDING)
+  transactionReference String?       @map("transaction_reference")
+  createdAt            DateTime      @default(now()) @map("created_at")
+
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
+}
+
+model Receipt {
+  id            String   @id @default(uuid()) @db.Uuid
+  orderId       String?  @map("order_id") @db.Uuid
+  receiptNumber String   @map("receipt_number")
+  generatedAt   DateTime @default(now()) @map("generated_at")
+
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@map("receipts")
+}
+
+model PaymentSettings {
+  id           String   @id @default(uuid()) @db.Uuid
+  branchId     String?  @map("branch_id") @db.Uuid
+  upiId        String?  @map("upi_id")
+  upiName      String?  @map("upi_name")
+  merchantCode String?  @map("merchant_code")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  branch Branch? @relation(fields: [branchId], references: [id])
+
+  @@map("payment_settings")
+}
