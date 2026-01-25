@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { LayoutGrid, Clock, CalendarCheck, Home, Settings, ChefHat } from 'lucide-react';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import TableCard from '../../components/tables/TableCard';
-import { getFloors, getTablesByFloor, getFloorStats, type Floor, type Table } from '../../api/tables.api';
+import { getFloors, getTablesBackendApi, type Floor, type Table } from '../../api/tables.api';
 import { useAuth } from '../../store/auth.store';
 import { useSession } from '../../store/session.store';
 import './POS.css';
@@ -32,22 +32,32 @@ const TableView = () => {
         loadFloors();
     }, []);
 
-    // Load tables when floor changes
+    // Load tables from backend (all tables - no floor filtering as floors are still mock)
     useEffect(() => {
-        if (!activeFloorId) return;
-
         const loadTables = async () => {
             setIsLoading(true);
-            const [tablesData, statsData] = await Promise.all([
-                getTablesByFloor(activeFloorId),
-                getFloorStats(activeFloorId),
-            ]);
-            setTables(tablesData);
-            setStats(statsData);
+            try {
+                // Get all tables from backend
+                const tablesData = await getTablesBackendApi();
+
+                // Show all tables (floor filtering skipped since floors use mock IDs)
+                setTables(tablesData);
+
+                // Calculate stats from all tables
+                const statsData = {
+                    free: tablesData.filter(t => t.status === 'FREE').length,
+                    occupied: tablesData.filter(t => t.status === 'OCCUPIED').length,
+                    reserved: tablesData.filter(t => t.status === 'RESERVED').length,
+                };
+                setStats(statsData);
+            } catch (error) {
+                console.error('Failed to load tables:', error);
+                setTables([]);
+            }
             setIsLoading(false);
         };
         loadTables();
-    }, [activeFloorId]);
+    }, []);
 
     const handleTableClick = (table: Table) => {
         navigate(`/pos/order/${table.id}`);

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../store/auth.store';
 import { useSession } from '../../store/session.store';
+import { getTerminalsApi, type Terminal } from '../../api/branches.api';
 import StatCard from '../../components/common/StatCard';
 import './Dashboard.css';
 

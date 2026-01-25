@@ -1,22 +1,31 @@
 /**
- * Branches API - Mock Data
- * Handles branch and terminal management
- * Routes match backend: POST /api/branches, POST /api/terminals
+ * Branches API - Real Backend Integration
+ * Connects to backend endpoints for branch and terminal management
  */
+
+const API_BASE_URL = 'http://localhost:5000/api';
+
+const getAuthHeaders = (): HeadersInit => {
+    const token = localStorage.getItem('pos_auth_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
 
 export interface Branch {
     id: string;
     name: string;
     address?: string;
-    created_at?: string;
+    createdAt?: string;
 }
 
 export interface Terminal {
     id: string;
-    branch_id: string;
-    terminal_name: string;
-    user_id?: string;
-    created_at?: string;
+    branchId: string;
+    terminalName: string;
+    userId?: string;
+    createdAt?: string;
 }
 
 export interface BranchResponse {
@@ -31,42 +40,21 @@ export interface TerminalResponse {
     error?: string;
 }
 
-// Mock branch data
-const mockBranches: Branch[] = [
-    {
-        id: 'branch-001',
-        name: 'Odoo Cafe - Main',
-        address: '123 Main Street, City Center',
-        created_at: new Date().toISOString(),
-    },
-];
-
-// Mock terminal data
-const mockTerminals: Terminal[] = [
-    {
-        id: 'terminal-001-main',
-        branch_id: 'branch-001',
-        terminal_name: 'Counter 1',
-        created_at: new Date().toISOString(),
-    },
-    {
-        id: 'terminal-002-main',
-        branch_id: 'branch-001',
-        terminal_name: 'Counter 2',
-        created_at: new Date().toISOString(),
-    },
-];
-
 /**
  * Get all branches
  * GET /api/branches
  */
 export const getBranches = async (): Promise<Branch[]> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(mockBranches);
-        }, 200);
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/branches`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch branches');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching branches:', error);
+        throw error;
+    }
 };
 
 /**
@@ -74,23 +62,35 @@ export const getBranches = async (): Promise<Branch[]> => {
  * POST /api/branches
  */
 export const createBranch = async (name: string, address?: string): Promise<BranchResponse> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const newBranch: Branch = {
-                id: `branch-${Date.now()}`,
-                name,
-                address,
-                created_at: new Date().toISOString(),
+    try {
+        const response = await fetch(`${API_BASE_URL}/branches`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name, address }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            return {
+                success: false,
+                error: errorData.message || 'Failed to create branch',
             };
+        }
 
-            mockBranches.push(newBranch);
-
-            resolve({
-                success: true,
-                branch: newBranch,
-            });
-        }, 200);
-    });
+        const branch = await response.json();
+        return {
+            success: true,
+            branch,
+        };
+    } catch (error) {
+        console.error('Error creating branch:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to create branch',
+        };
+    }
 };
 
 /**
@@ -98,29 +98,39 @@ export const createBranch = async (name: string, address?: string): Promise<Bran
  * GET /api/branches/:id
  */
 export const getBranchById = async (branchId: string): Promise<Branch | null> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const branch = mockBranches.find(b => b.id === branchId);
-            resolve(branch || null);
-        }, 100);
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/branches/${branchId}`);
+        if (!response.ok) {
+            if (response.status === 404) {
+                return null;
+            }
+            throw new Error('Failed to fetch branch');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching branch:', error);
+        throw error;
+    }
 };
 
 /**
  * Get all terminals (optionally filtered by branch)
- * GET /api/terminals?branch_id=...
+ * GET /api/terminals?branchId=...
  */
 export const getTerminals = async (branchId?: string): Promise<Terminal[]> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            if (branchId) {
-                const branchTerminals = mockTerminals.filter(t => t.branch_id === branchId);
-                resolve(branchTerminals);
-            } else {
-                resolve(mockTerminals);
-            }
-        }, 200);
-    });
+    try {
+        const url = branchId
+            ? `${API_BASE_URL}/terminals?branchId=${branchId}`
+            : `${API_BASE_URL}/terminals`;
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Failed to fetch terminals');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching terminals:', error);
+        throw error;
+    }
 };
 
 /**
@@ -132,24 +142,35 @@ export const createTerminal = async (
     terminalName: string,
     userId?: string
 ): Promise<TerminalResponse> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const newTerminal: Terminal = {
-                id: `terminal-${Date.now()}`,
-                branch_id: branchId,
-                terminal_name: terminalName,
-                user_id: userId,
-                created_at: new Date().toISOString(),
+    try {
+        const response = await fetch(`${API_BASE_URL}/terminals`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ branchId, terminalName, userId }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            return {
+                success: false,
+                error: errorData.message || 'Failed to create terminal',
             };
+        }
 
-            mockTerminals.push(newTerminal);
-
-            resolve({
-                success: true,
-                terminal: newTerminal,
-            });
-        }, 200);
-    });
+        const terminal = await response.json();
+        return {
+            success: true,
+            terminal,
+        };
+    } catch (error) {
+        console.error('Error creating terminal:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to create terminal',
+        };
+    }
 };
 
 /**
@@ -157,10 +178,147 @@ export const createTerminal = async (
  * GET /api/terminals/:id
  */
 export const getTerminalById = async (terminalId: string): Promise<Terminal | null> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const terminal = mockTerminals.find(t => t.id === terminalId);
-            resolve(terminal || null);
-        }, 100);
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/terminals/${terminalId}`);
+        if (!response.ok) {
+            if (response.status === 404) {
+                return null;
+            }
+            throw new Error('Failed to fetch terminal');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching terminal:', error);
+        throw error;
+    }
 };
+
+// ============================================
+// REAL BACKEND API FUNCTIONS
+// ============================================
+
+
+
+/**
+ * Backend Terminal interface (camelCase)
+ */
+interface BackendTerminal {
+    id: string;
+    terminalName: string;
+    branchId?: string;
+    userId?: string;
+    createdAt?: string;
+    branch?: {
+        id: string;
+        name: string;
+    };
+    user?: {
+        id: string;
+        name: string;
+        email: string;
+    };
+}
+
+/**
+ * Map backend terminal to frontend Terminal interface
+ */
+const mapBackendTerminal = (t: BackendTerminal): Terminal => ({
+    id: t.id,
+    branchId: t.branchId || '',
+    terminalName: t.terminalName,
+    userId: t.userId,
+    createdAt: t.createdAt,
+});
+
+/**
+ * Get all terminals from backend
+ * GET /api/terminals
+ */
+export const getTerminalsApi = async (): Promise<Terminal[]> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/terminals`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            console.error('Failed to fetch terminals');
+            return [];
+        }
+
+        const data = await response.json();
+        // Backend returns { terminals: [...] }
+        const terminals: BackendTerminal[] = data.terminals || [];
+
+        return terminals.map(mapBackendTerminal);
+    } catch (error) {
+        console.error('Get terminals error:', error);
+        return [];
+    }
+};
+
+/**
+ * Get terminal by ID from backend
+ * GET /api/terminals/:id
+ */
+export const getTerminalByIdApi = async (terminalId: string): Promise<Terminal | null> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/terminals/${encodeURIComponent(terminalId)}`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const data: BackendTerminal = await response.json();
+        return mapBackendTerminal(data);
+    } catch (error) {
+        console.error('Get terminal by ID error:', error);
+        return null;
+    }
+};
+
+/**
+ * Create a new terminal via backend
+ * POST /api/terminals
+ */
+export const createTerminalApi = async (
+    terminalName: string,
+    branchId?: string,
+    userId?: string
+): Promise<TerminalResponse> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/terminals`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                terminalName,
+                branchId,
+                userId,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: data.message || 'Failed to create terminal',
+            };
+        }
+
+        return {
+            success: true,
+            terminal: mapBackendTerminal(data),
+        };
+    } catch (error) {
+        console.error('Create terminal error:', error);
+        return {
+            success: false,
+            error: 'Network error. Please try again.',
+        };
+    }
+};
+
