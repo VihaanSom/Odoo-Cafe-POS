@@ -35,7 +35,6 @@ const ProductForm = () => {
         categoryId: '',
         price: '',
         cost: '',
-        barcode: '',
         taxes: 'gst_5',
         description: '',
         icon: '📦',
@@ -62,7 +61,6 @@ const ProductForm = () => {
                         categoryId: product.categoryId,
                         price: product.price.toString(),
                         cost: product.cost?.toString() || '',
-                        barcode: product.barcode || '',
                         taxes: product.taxes,
                         description: product.description || '',
                         icon: product.icon || '📦',
@@ -109,7 +107,6 @@ const ProductForm = () => {
             categoryId: formData.categoryId,
             price: parseFloat(formData.price),
             cost: parseFloat(formData.cost) || 0,
-            barcode: formData.barcode,
             taxes: formData.taxes,
             description: formData.description,
             icon: formData.icon,
@@ -288,16 +285,6 @@ const ProductForm = () => {
                                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                                     ))}
                                 </select>
-                            </div>
-                            <div className="product-form__group">
-                                <label className="product-form__label">Barcode</label>
-                                <input
-                                    type="text"
-                                    className="product-form__input"
-                                    value={formData.barcode}
-                                    onChange={(e) => handleInputChange('barcode', e.target.value)}
-                                    placeholder="Scan or enter barcode"
-                                />
                             </div>
                         </div>
 

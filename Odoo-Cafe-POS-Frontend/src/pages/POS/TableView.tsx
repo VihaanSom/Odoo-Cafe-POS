@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutGrid, Clock, CalendarCheck, Home, Settings, ArrowLeft } from 'lucide-react';
+import { LayoutGrid, Clock, CalendarCheck, Home, Settings, ChefHat } from 'lucide-react';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import TableCard from '../../components/tables/TableCard';
 import { getFloors, getTablesBackendApi, type Floor, type Table } from '../../api/tables.api';
 import { useAuth } from '../../store/auth.store';
+import { useSession } from '../../store/session.store';
 import './POS.css';
 
 const TableView = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { session } = useSession();
 
     const [floors, setFloors] = useState<Floor[]>([]);
     const [activeFloorId, setActiveFloorId] = useState<string>('');
@@ -61,10 +63,6 @@ const TableView = () => {
         navigate(`/pos/order/${table.id}`);
     };
 
-    const handleBackToDashboard = () => {
-        navigate('/dashboard');
-    };
-
     const getInitials = (name: string) => {
         return name
             .split(' ')
@@ -86,17 +84,16 @@ const TableView = () => {
                     <button className="pos-sidebar__item pos-sidebar__item--active" title="Tables">
                         <LayoutGrid size={22} />
                     </button>
-                    <button className="pos-sidebar__item" title="Home">
+                    <button className="pos-sidebar__item" title="Home" onClick={() => navigate('/dashboard')}>
                         <Home size={22} />
                     </button>
-                    <button className="pos-sidebar__item" title="Settings">
+                    <button className="pos-sidebar__item" title="Kitchen Display" onClick={() => navigate('/kitchen')}>
+                        <ChefHat size={22} />
+                    </button>
+                    <button className="pos-sidebar__item" title="Settings" onClick={() => navigate(`/pos/settings${session?.terminal_id ? `?terminal=${session.terminal_id}` : ''}`)}>
                         <Settings size={22} />
                     </button>
                 </nav>
-
-                <button className="pos-sidebar__item" title="Back to Dashboard" onClick={handleBackToDashboard}>
-                    <ArrowLeft size={22} />
-                </button>
             </aside>
 
             {/* Main Content */}

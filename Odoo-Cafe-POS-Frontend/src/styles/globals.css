@@ -19,6 +19,7 @@
 
     /* Borders & Shadows */
     --border-color: #e2e8f0;
+    --border-light: #e2e8f0;
     --border-radius: 12px;
     --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.05);
 
