@@ -20,7 +20,11 @@ const getActiveOrders = async (branchId) => {
         include: {
             orderItems: {
                 include: {
-                    product: true
+                    product: {
+                        include: {
+                            category: true
+                        }
+                    }
                 }
             },
             table: true,
@@ -47,7 +51,13 @@ const getOrdersByStatus = async (status, branchId) => {
         where,
         include: {
             orderItems: {
-                include: { product: true }
+                include: {
+                    product: {
+                        include: {
+                            category: true
+                        }
+                    }
+                }
             },
             table: true
         },

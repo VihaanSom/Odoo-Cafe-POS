@@ -153,8 +153,24 @@
 }
 
 .kitchen-display__tab:hover {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
+    background: var(--bg-color);
+    border-color: #6B7280;
+    color: #374151;
+}
+
+.kitchen-display__tab--tocook:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.kitchen-display__tab--preparing:hover {
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+.kitchen-display__tab--completed:hover {
+    border-color: #10b981;
+    color: #10b981;
 }
 
 .kitchen-display__tab--active {
@@ -380,6 +396,8 @@
     cursor: pointer;
     transition: all var(--transition-fast);
     border: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
 }
 
 .kitchen-ticket:hover {
@@ -415,6 +433,7 @@
 
 .kitchen-ticket__items {
     padding: 1rem 1.25rem;
+    flex: 1;
 }
 
 .kitchen-ticket__item {
@@ -440,6 +459,7 @@
     font-size: 0.85rem;
     color: var(--text-muted);
     border-top: 1px solid var(--border-light);
+    margin-top: auto;
 }
 
 .kitchen-ticket__table {
