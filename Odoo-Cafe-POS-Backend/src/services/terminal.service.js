@@ -52,6 +52,12 @@ const getAllTerminals = async () => {
                     email: true
                 }
             },
+            posSessions: {
+                orderBy: {
+                    openedAt: 'desc'
+                },
+                take: 1
+            }
         },
         orderBy: {
             createdAt: 'desc',

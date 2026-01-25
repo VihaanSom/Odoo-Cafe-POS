@@ -42,7 +42,7 @@ interface POSTerminal {
 const mapTerminalToPOS = (t: Terminal): POSTerminal => ({
     id: t.id,
     name: t.terminalName,
-    lastOpen: t.createdAt,
+    lastOpen: t.lastSession?.openedAt || t.createdAt,
     lastSell: undefined,
     paymentMethods: {
         cash: true,

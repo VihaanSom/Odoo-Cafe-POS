@@ -26,6 +26,10 @@ export interface Terminal {
     terminalName: string;
     userId?: string;
     createdAt?: string;
+    lastSession?: {
+        openedAt: string;
+        closedAt?: string;
+    };
 }
 
 export interface BranchResponse {
@@ -217,6 +221,10 @@ interface BackendTerminal {
         name: string;
         email: string;
     };
+    posSessions?: {
+        openedAt: string;
+        closedAt?: string;
+    }[];
 }
 
 /**
@@ -228,6 +236,7 @@ const mapBackendTerminal = (t: BackendTerminal): Terminal => ({
     terminalName: t.terminalName,
     userId: t.userId,
     createdAt: t.createdAt,
+    lastSession: t.posSessions?.[0],
 });
 
 /**
