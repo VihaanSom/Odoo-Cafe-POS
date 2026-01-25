@@ -7,6 +7,7 @@
 export interface Session {
     id: string;
     terminal_id: string;
+    branch_id: string;
     opened_at: string;
     closed_at?: string;
     total_sales: number;
@@ -65,6 +66,7 @@ export const openSessionApi = async (terminalId: string): Promise<OpenSessionRes
                 opened_at: new Date().toISOString(),
                 total_sales: 0,
                 status: 'open',
+                branch_id: 'mock-branch-id',
             };
 
             mockSessions.push(newSession);
@@ -278,6 +280,7 @@ interface BackendSession {
     terminal?: {
         id: string;
         terminalName: string;
+        branchId?: string;
     };
 }
 
@@ -287,6 +290,7 @@ interface BackendSession {
 const mapBackendSession = (s: BackendSession): Session => ({
     id: s.id,
     terminal_id: s.terminalId,
+    branch_id: s.terminal?.branchId || '',
     opened_at: s.openedAt,
     closed_at: s.closedAt || undefined,
     total_sales: Number(s.totalSales),

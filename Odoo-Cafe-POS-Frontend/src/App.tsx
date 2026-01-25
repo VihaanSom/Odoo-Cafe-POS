@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './store/auth.store';
 import { SessionProvider } from './store/session.store';
+import { SocketProvider } from './context/SocketContext';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -25,43 +26,41 @@ function App() {
   return (
     <AuthProvider>
       <SessionProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Auth Routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+        <SocketProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Auth Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
 
-            {/* Dashboard */}
-            <Route path="/dashboard" element={<Dashboard />} />
+              {/* Dashboard */}
+              <Route path="/dashboard" element={<Dashboard />} />
 
-            {/* Admin/Settings Routes */}
-            <Route path="/dashboard/products" element={<ProductList />} />
-            <Route path="/dashboard/products/new" element={<ProductForm />} />
-            <Route path="/dashboard/products/:productId" element={<ProductForm />} />
-            <Route path="/dashboard/products-old" element={<Products />} />
-            <Route path="/dashboard/categories" element={<Categories />} />
-            <Route path="/dashboard/orders" element={<Orders />} />
-            <Route path="/dashboard/customers" element={<Customers />} />
-            <Route path="/dashboard/payments" element={<Payments />} />
-            <Route path="/dashboard/floors" element={<FloorEditor />} />
-            <Route path="/dashboard/settings" element={<Settings />} />
+              {/* Admin/Settings Routes */}
+              <Route path="/dashboard/products" element={<ProductList />} />
+              <Route path="/dashboard/products/new" element={<ProductForm />} />
+              <Route path="/dashboard/products/:productId" element={<ProductForm />} />
+              <Route path="/dashboard/products-old" element={<Products />} />
+              <Route path="/dashboard/categories" element={<Categories />} />
+              <Route path="/dashboard/orders" element={<Orders />} />
+              <Route path="/dashboard/customers" element={<Customers />} />
+              <Route path="/dashboard/payments" element={<Payments />} />
+              <Route path="/dashboard/floors" element={<FloorEditor />} />
+              <Route path="/dashboard/settings" element={<Settings />} />
 
-            {/* POS Routes */}
-            <Route path="/pos" element={<TableView />} />
-            <Route path="/pos/tables" element={<TableView />} />
-            <Route path="/pos/order/:tableId" element={<OrderView />} />
-            <Route path="/pos/settings" element={<TerminalSettings />} />
+              {/* POS Routes */}
+              <Route path="/pos" element={<TableView />} />
+              <Route path="/pos/tables" element={<TableView />} />
+              <Route path="/pos/order/:tableId" element={<OrderView />} />
 
-            {/* Kitchen Display */}
-            <Route path="/kitchen" element={<KitchenDisplay />} />
+              {/* Default redirect to login */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
 
-            {/* Default redirect to login */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-
-            {/* Catch all - redirect to login */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </BrowserRouter>
+              {/* Catch all - redirect to login */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </SocketProvider>
       </SessionProvider>
     </AuthProvider>
   );

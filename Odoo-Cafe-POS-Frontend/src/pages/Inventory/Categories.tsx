@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { Edit2, Trash2, X, FolderOpen, GripVertical, Loader2 } from 'lucide-react';
 import AdminPageLayout from '../../components/admin/AdminPageLayout';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import {
     getCategories,
     createCategory,
@@ -43,7 +44,7 @@ const Categories = () => {
             try {
                 setIsLoading(true);
                 setError(null);
-                
+
                 // Get the first branch (single branch system)
                 const branches = await getBranches();
                 if (branches.length > 0) {
@@ -61,7 +62,7 @@ const Categories = () => {
                 setIsLoading(false);
             }
         };
-        
+
         loadData();
     }, []);
 
@@ -86,18 +87,25 @@ const Categories = () => {
         setIsModalOpen(true);
     };
 
-    const handleDelete = async (categoryId: string, e: React.MouseEvent) => {
+    const handleDeleteClick = (categoryId: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (confirm('Are you sure you want to delete this category?')) {
-            setIsSaving(true);
-            const result = await deleteCategory(categoryId);
-            if (result.success) {
-                setCategories(categories.filter(c => c.id !== categoryId));
-            } else {
-                alert(result.error || 'Failed to delete category');
-            }
-            setIsSaving(false);
+        setDeleteId(categoryId);
+        setConfirmOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!deleteId) return;
+
+        setIsSaving(true);
+        const result = await deleteCategory(deleteId);
+        if (result.success) {
+            setCategories(categories.filter(c => c.id !== deleteId));
+        } else {
+            alert(result.error || 'Failed to delete category');
         }
+        setIsSaving(false);
+        setConfirmOpen(false);
+        setDeleteId(null);
     };
 
     const handleReorder = (newOrder: Category[]) => {
@@ -117,7 +125,7 @@ const Categories = () => {
             alert('No branch available');
             return;
         }
-        
+
         setIsSaving(true);
 
         if (editingCategory) {
@@ -150,7 +158,7 @@ const Categories = () => {
     // Loading state
     if (isLoading) {
         return (
-            <AdminPageLayout title="Categories" searchValue="" onSearchChange={() => {}} onNewClick={() => {}} newButtonLabel="New Category">
+            <AdminPageLayout title="Categories" searchValue="" onSearchChange={() => { }} onNewClick={() => { }} newButtonLabel="New Category">
                 <div className="categories-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
                     <Loader2 size={32} className="spin-animation" style={{ animation: 'spin 1s linear infinite' }} />
                 </div>
@@ -162,7 +170,7 @@ const Categories = () => {
     // Error state
     if (error) {
         return (
-            <AdminPageLayout title="Categories" searchValue="" onSearchChange={() => {}} onNewClick={() => {}} newButtonLabel="New Category">
+            <AdminPageLayout title="Categories" searchValue="" onSearchChange={() => { }} onNewClick={() => { }} newButtonLabel="New Category">
                 <div className="categories-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px', color: '#e53e3e' }}>
                     <p>{error}</p>
                 </div>
@@ -184,7 +192,7 @@ const Categories = () => {
                         <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: 'white' }} />
                     </div>
                 )}
-                
+
                 {!isSearching && (
                     <div className="categories-hint">
                         <GripVertical size={16} />

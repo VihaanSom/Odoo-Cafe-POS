@@ -4,7 +4,8 @@ import { ArrowLeft } from 'lucide-react';
 import { OrderProvider, useOrder } from '../../store/order.store';
 import ProductCard from '../../components/orders/ProductCard';
 import OrderSummary from '../../components/orders/OrderSummary';
-import { getCategories, getProductsBackendApi, type Category, type Product } from '../../api/products.api';
+import { getProductsBackendApi, type Product } from '../../api/products.api';
+import { getCategories, type Category } from '../../api/categories.api';
 import { getTableByIdBackendApi } from '../../api/tables.api';
 import './OrderView.css';
 
@@ -24,10 +25,16 @@ const OrderViewContent = () => {
     // Load categories on mount
     useEffect(() => {
         const loadCategories = async () => {
-            const categoriesData = await getCategories();
-            setCategories(categoriesData);
-            if (categoriesData.length > 0) {
-                setActiveCategoryId(categoriesData[0].id);
+            try {
+                // Get the first branch (using existing logic or context if available) (Simplified for now, fetching all)
+                // Ideally this should come from the table's branch, but for now we fetch generally
+                const categoriesData = await getCategories();
+                setCategories(categoriesData);
+                if (categoriesData.length > 0) {
+                    setActiveCategoryId(categoriesData[0].id);
+                }
+            } catch (error) {
+                console.error('Failed to load categories', error);
             }
         };
         loadCategories();
@@ -51,17 +58,27 @@ const OrderViewContent = () => {
         }
     }, [tableId, setTableId]);
 
-    // Load products from backend (all products - categories still mock)
+    // Load products from backend and filter by active category
     useEffect(() => {
         const loadProducts = async () => {
+            if (!activeCategoryId) return;
+
             setIsLoading(true);
-            // Get all products from backend (ignore category filtering since categories are mock)
-            const productsData = await getProductsBackendApi();
-            setProducts(productsData as (Product & { icon?: string })[]);
+            try {
+                // Fetch all products first (or could optimize to fetch by category key)
+                const productsData = await getProductsBackendApi();
+
+                // Filter products that match the active Category ID
+                const filteredProducts = productsData.filter(p => p.categoryId === activeCategoryId);
+
+                setProducts(filteredProducts as (Product & { icon?: string })[]);
+            } catch (error) {
+                console.error("Failed to load products", error);
+            }
             setIsLoading(false);
         };
         loadProducts();
-    }, []);
+    }, [activeCategoryId]);
 
     const handleProductClick = (product: Product) => {
         addToCart({

@@ -4,7 +4,8 @@ import { motion } from 'framer-motion';
 import { LayoutGrid, Clock, CalendarCheck, Home, Settings, ChefHat } from 'lucide-react';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import TableCard from '../../components/tables/TableCard';
-import { getFloors, getTablesBackendApi, type Floor, type Table } from '../../api/tables.api';
+import { useSocket } from '../../context/SocketContext';
+import { getFloorsBackendApi, getTablesBackendApi, type Floor, type Table } from '../../api/tables.api';
 import { useAuth } from '../../store/auth.store';
 import { useSession } from '../../store/session.store';
 import './POS.css';
@@ -13,6 +14,7 @@ const TableView = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { session } = useSession();
+    const { socket } = useSocket();
 
     const [floors, setFloors] = useState<Floor[]>([]);
     const [activeFloorId, setActiveFloorId] = useState<string>('');
@@ -20,36 +22,34 @@ const TableView = () => {
     const [stats, setStats] = useState({ free: 0, occupied: 0, reserved: 0 });
     const [isLoading, setIsLoading] = useState(true);
 
-    // Load floors on mount
+    // Load floors on mount (filtered by session's branch)
     useEffect(() => {
         const loadFloors = async () => {
-            const floorsData = await getFloors();
+            if (!session?.branch_id) return;
+
+            const floorsData = await getFloorsBackendApi(session.branch_id);
             setFloors(floorsData);
             if (floorsData.length > 0) {
                 setActiveFloorId(floorsData[0].id);
             }
         };
         loadFloors();
-    }, []);
+    }, [session?.branch_id]);
 
-    // Load tables from backend (all tables - no floor filtering as floors are still mock)
+    // Load tables when active floor changes
     useEffect(() => {
         const loadTables = async () => {
+            if (!activeFloorId) return;
+
             setIsLoading(true);
             try {
-                // Get all tables from backend
-                const tablesData = await getTablesBackendApi();
+                // Get tables filtered by floor
+                const tablesData = await getTablesBackendApi(activeFloorId);
 
-                // Show all tables (floor filtering skipped since floors use mock IDs)
                 setTables(tablesData);
 
-                // Calculate stats from all tables
-                const statsData = {
-                    free: tablesData.filter(t => t.status === 'FREE').length,
-                    occupied: tablesData.filter(t => t.status === 'OCCUPIED').length,
-                    reserved: tablesData.filter(t => t.status === 'RESERVED').length,
-                };
-                setStats(statsData);
+                // Calculate stats from tables
+                updateStats(tablesData);
             } catch (error) {
                 console.error('Failed to load tables:', error);
                 setTables([]);
@@ -57,7 +57,38 @@ const TableView = () => {
             setIsLoading(false);
         };
         loadTables();
-    }, []);
+    }, [activeFloorId]);
+
+    // Socket: Listen for table updates
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on('table:updated', (updatedTable: any) => {
+            // Only update if table belongs to active floor
+            if (activeFloorId && updatedTable.floorId === activeFloorId) {
+                setTables((prevTables) => {
+                    const newTables = prevTables.map(t =>
+                        t.id === updatedTable.id ? { ...t, ...updatedTable } : t
+                    );
+                    updateStats(newTables);
+                    return newTables;
+                });
+            }
+        });
+
+        return () => {
+            socket.off('table:updated');
+        };
+    }, [socket, activeFloorId]);
+
+    const updateStats = (currentTables: Table[]) => {
+        const statsData = {
+            free: currentTables.filter(t => t.status === 'FREE').length,
+            occupied: currentTables.filter(t => t.status === 'OCCUPIED').length,
+            reserved: currentTables.filter(t => t.status === 'RESERVED').length,
+        };
+        setStats(statsData);
+    };
 
     const handleTableClick = (table: Table) => {
         navigate(`/pos/order/${table.id}`);

@@ -5,17 +5,20 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Plus, Trash2, Save, Upload } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Upload, Loader2 } from 'lucide-react';
 import {
     type Product,
     type PriceRule,
-    type Category,
     getProductById,
-    getCategories,
     createProduct,
     updateProduct,
     TAX_OPTIONS,
 } from '../../api/products.api';
+import {
+    type Category,
+    getCategories,
+} from '../../api/categories.api';
+import { uploadProductImage } from '../../api/upload.api';
 
 type TabType = 'general' | 'variants';
 
@@ -26,6 +29,7 @@ const ProductForm = () => {
 
     const [activeTab, setActiveTab] = useState<TabType>('general');
     const [categories, setCategories] = useState<Category[]>([]);
+    const [branches, setBranches] = useState<any[]>([]); // To get branchId
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -41,6 +45,9 @@ const ProductForm = () => {
     });
 
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imageUrl, setImageUrl] = useState<string>('');
+    const [isUploading, setIsUploading] = useState(false);
 
     const [priceRules, setPriceRules] = useState<PriceRule[]>([
         { minQty: 1, price: 0 }
@@ -51,6 +58,16 @@ const ProductForm = () => {
         const loadData = async () => {
             const categoriesData = await getCategories();
             setCategories(categoriesData);
+
+            // Fetch branches to get an ID for new products
+            try {
+                // Assuming getBranches exists in branches.api.ts and is exported
+                const { getBranches } = await import('../../api/branches.api');
+                const branchesData = await getBranches();
+                setBranches(branchesData);
+            } catch (e) {
+                console.error("Failed to load branches", e);
+            }
 
             if (isEditing && productId) {
                 setIsLoading(true);
@@ -66,6 +83,11 @@ const ProductForm = () => {
                         icon: product.icon || '📦',
                     });
                     setPriceRules(product.priceRules.length > 0 ? product.priceRules : [{ minQty: 1, price: product.price }]);
+                    // Load existing image URL
+                    if (product.image) {
+                        setImageUrl(product.image);
+                        setImagePreview(product.image);
+                    }
                 }
                 setIsLoading(false);
             }
@@ -102,27 +124,60 @@ const ProductForm = () => {
 
         setIsSaving(true);
 
-        const productData: Omit<Product, 'id'> = {
-            name: formData.name,
-            categoryId: formData.categoryId,
-            price: parseFloat(formData.price),
-            cost: parseFloat(formData.cost) || 0,
-            taxes: formData.taxes,
-            description: formData.description,
-            icon: formData.icon,
-            priceRules: priceRules,
-            status: 'active',
-            isActive: true,
-        };
+        try {
+            // Upload image if a new file was selected
+            let finalImageUrl = imageUrl;
+            if (imageFile) {
+                setIsUploading(true);
+                try {
+                    finalImageUrl = await uploadProductImage(imageFile);
+                    setImageUrl(finalImageUrl);
+                } catch (uploadError) {
+                    console.error('Image upload failed:', uploadError);
+                    alert('Failed to upload image. Please try again.');
+                    setIsSaving(false);
+                    setIsUploading(false);
+                    return;
+                }
+                setIsUploading(false);
+            }
 
-        if (isEditing && productId) {
-            await updateProduct(productId, productData);
-        } else {
-            await createProduct(productData);
+            let branchId = branches.length > 0 ? branches[0].id : undefined;
+            // If editing, we might want to keep original branchId, but for now we rely on backend or existing
+
+            const productData: Omit<Product, 'id'> = {
+                name: formData.name,
+                categoryId: formData.categoryId,
+                branchId: branchId,
+                price: parseFloat(formData.price),
+                barcode: formData.barcode,
+                taxes: formData.taxes,
+                description: formData.description,
+                icon: formData.icon,
+                image: finalImageUrl || undefined,
+                priceRules: priceRules,
+                status: 'active',
+                isActive: true,
+            };
+
+            if (isEditing && productId) {
+                await updateProduct(productId, productData);
+            } else {
+                if (!branchId) {
+                    alert("No branch found. Cannot create product.");
+                    setIsSaving(false);
+                    return;
+                }
+                await createProduct(productData);
+            }
+
+            navigate('/dashboard/products');
+        } catch (error) {
+            console.error('Save product error:', error);
+            alert('Failed to save product. Please try again.');
+        } finally {
+            setIsSaving(false);
         }
-
-        setIsSaving(false);
-        navigate('/dashboard/products');
     };
 
     const tabs: { key: TabType; label: string }[] = [
@@ -204,21 +259,36 @@ const ProductForm = () => {
                                             <button
                                                 type="button"
                                                 className="product-form__image-remove"
-                                                onClick={() => setImagePreview(null)}
+                                                onClick={() => {
+                                                    setImagePreview(null);
+                                                    setImageFile(null);
+                                                    setImageUrl('');
+                                                }}
                                             >
                                                 ×
                                             </button>
                                         </div>
                                     ) : (
                                         <label className="product-form__image-dropzone">
-                                            <Upload size={24} />
-                                            <span>Click to upload</span>
+                                            {isUploading ? (
+                                                <>
+                                                    <Loader2 size={24} className="animate-spin" />
+                                                    <span>Uploading...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Upload size={24} />
+                                                    <span>Click to upload</span>
+                                                </>
+                                            )}
                                             <input
                                                 type="file"
                                                 accept="image/*"
+                                                disabled={isUploading}
                                                 onChange={(e) => {
                                                     const file = e.target.files?.[0];
                                                     if (file) {
+                                                        setImageFile(file);
                                                         const reader = new FileReader();
                                                         reader.onloadend = () => {
                                                             setImagePreview(reader.result as string);
@@ -260,43 +330,55 @@ const ProductForm = () => {
                                     placeholder="0.00"
                                 />
                             </div>
+                            <div className="product-form__row">
+                                <div className="product-form__group">
+                                    <label className="product-form__label">Sale Price (₹) *</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        className="product-form__input"
+                                        value={formData.price}
+                                        onChange={(e) => handleInputChange('price', e.target.value)}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="product-form__row">
+                                <div className="product-form__group">
+                                    <label className="product-form__label">Customer Taxes</label>
+                                    <select
+                                        className="product-form__select"
+                                        value={formData.taxes}
+                                        onChange={(e) => handleInputChange('taxes', e.target.value)}
+                                    >
+                                        {TAX_OPTIONS.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="product-form__group">
+                                    <label className="product-form__label">Barcode</label>
+                                    <input
+                                        type="text"
+                                        className="product-form__input"
+                                        value={formData.barcode}
+                                        onChange={(e) => handleInputChange('barcode', e.target.value)}
+                                        placeholder="Scan or enter barcode"
+                                    />
+                                </div>
+                            </div>
+
                             <div className="product-form__group">
-                                <label className="product-form__label">Cost Price (₹)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    className="product-form__input"
-                                    value={formData.cost}
-                                    onChange={(e) => handleInputChange('cost', e.target.value)}
-                                    placeholder="0.00"
+                                <label className="product-form__label">Description</label>
+                                <textarea
+                                    className="product-form__textarea"
+                                    value={formData.description}
+                                    onChange={(e) => handleInputChange('description', e.target.value)}
+                                    placeholder="Optional product description..."
+                                    rows={3}
                                 />
                             </div>
-                        </div>
-
-                        <div className="product-form__row">
-                            <div className="product-form__group">
-                                <label className="product-form__label">Customer Taxes</label>
-                                <select
-                                    className="product-form__select"
-                                    value={formData.taxes}
-                                    onChange={(e) => handleInputChange('taxes', e.target.value)}
-                                >
-                                    {TAX_OPTIONS.map(opt => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="product-form__group">
-                            <label className="product-form__label">Description</label>
-                            <textarea
-                                className="product-form__textarea"
-                                value={formData.description}
-                                onChange={(e) => handleInputChange('description', e.target.value)}
-                                placeholder="Optional product description..."
-                                rows={3}
-                            />
                         </div>
                     </motion.div>
                 )}
@@ -721,6 +803,15 @@ const ProductForm = () => {
                     .product-form__tabs {
                         overflow-x: auto;
                     }
+                }
+
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+
+                .animate-spin {
+                    animation: spin 1s linear infinite;
                 }
             `}</style>
         </div>
