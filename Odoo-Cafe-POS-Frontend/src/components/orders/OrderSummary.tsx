@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, CreditCard, ClipboardList } from 'lucide-react';
+import { ShoppingBag, CreditCard, ClipboardList, CheckCircle, AlertCircle } from 'lucide-react';
 import { useOrder } from '../../store/order.store';
 import { useSession } from '../../store/session.store';
 import {
@@ -45,6 +45,12 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
     const [receiptData, setReceiptData] = useState<any>(null);
     const [terminalSettings, setTerminalSettings] = useState<PaymentSettings | null>(null);
     const [showQRCode, setShowQRCode] = useState(false);
+    const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+    const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
+        setNotification({ message, type });
+        setTimeout(() => setNotification(null), 3000);
+    };
 
     const formatPrice = (price: number | string | undefined | null) => {
         const numPrice = typeof price === 'string' ? parseFloat(price) : Number(price);
@@ -196,7 +202,7 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
                         setCustomerDisplayThankYou(session.terminal_id);
                     }
                 } else {
-                    alert('Payment successful, but failed to load receipt.');
+                    showNotification('Payment successful, but failed to load receipt.', 'error');
                     setShowPayment(false);
                     setActiveOrderId(null);
                 }
@@ -266,7 +272,7 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
 
             // Success - clear cart
             clearCart();
-            alert(`Order ${createResult.order.id} sent to kitchen!`);
+            showNotification(`Order ${createResult.order.id} sent to kitchen!`);
         } catch (error) {
             console.error('Place order error:', error);
             setOrderError('Network error. Please try again.');
@@ -368,7 +374,7 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
                                         if (terminalSettings?.upiId) {
                                             setShowQRCode(true);
                                         } else {
-                                            alert('UPI ID not configured for this terminal.');
+                                            showNotification('UPI ID not configured for this terminal.', 'error');
                                         }
                                     }}
                                     style={{ background: '#10B981' }}
@@ -397,7 +403,54 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
     }
 
     return (
-        <aside className="order-summary">
+        <aside className="order-summary" style={{ position: 'relative' }}>
+            {/* Notification Toast */}
+            <AnimatePresence>
+                {notification && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20, x: '-50%', scale: 0.95 }}
+                        animate={{ opacity: 1, y: 16, x: '-50%', scale: 1 }}
+                        exit={{ opacity: 0, y: -20, x: '-50%', scale: 0.95 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: '50%',
+                            background: 'rgba(255, 255, 255, 0.95)',
+                            backdropFilter: 'blur(12px)',
+                            border: '1px solid #E5E7EB',
+                            borderLeft: `4px solid ${notification.type === 'success' ? '#10B981' : '#EF4444'}`,
+                            color: '#1F2937',
+                            padding: '1rem 1.25rem',
+                            borderRadius: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            zIndex: 100,
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                            fontSize: '0.95rem',
+                            width: 'auto',
+                            minWidth: '320px',
+                            maxWidth: '90%',
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        <div style={{
+                            color: notification.type === 'success' ? '#10B981' : '#EF4444',
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}>
+                            {notification.type === 'success' ? <CheckCircle size={22} /> : <AlertCircle size={22} />}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#111827' }}>
+                                {notification.type === 'success' ? 'Success' : 'Error'}
+                            </span>
+                            <span style={{ color: '#4B5563', fontSize: '0.85rem' }}>{notification.message}</span>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             {/* Header */}
             <div className="order-summary__header">
                 <div className="order-summary__order-info">
