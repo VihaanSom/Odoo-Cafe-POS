@@ -20,6 +20,11 @@
     align-items: center;
     padding: 1.5rem 0;
     gap: 0.5rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 100;
 }
 
 .pos-sidebar__logo {
@@ -70,6 +75,7 @@
     flex: 1;
     padding: 2rem;
     overflow-y: auto;
+    margin-left: 80px;
 }
 
 /* Header */
@@ -364,12 +370,17 @@
 
     .pos-sidebar {
         width: 100%;
+        height: auto;
         flex-direction: row;
         padding: 0.75rem 1rem;
         border-right: none;
         border-bottom: 1px solid var(--border-color);
         justify-content: space-between;
         overflow-x: auto;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 100;
     }
 
     .pos-sidebar__logo {
@@ -384,6 +395,8 @@
 
     .pos-content {
         padding: 1rem;
+        margin-left: 0;
+        margin-top: 70px;
         height: calc(100vh - 70px);
         overflow-y: auto;
     }

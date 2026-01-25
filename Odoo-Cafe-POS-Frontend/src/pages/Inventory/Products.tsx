@@ -14,7 +14,6 @@ interface Product {
     category: string;
     price: number;
     cost: number;
-    barcode?: string;
     icon: string;
     isActive: boolean;
 }
@@ -56,7 +55,6 @@ const Products = () => {
         category: '',
         price: '',
         cost: '',
-        barcode: '',
     });
 
     // Confirm dialog state
@@ -74,7 +72,7 @@ const Products = () => {
 
     const handleNewClick = () => {
         setEditingProduct(null);
-        setFormData({ name: '', category: '', price: '', cost: '', barcode: '' });
+        setFormData({ name: '', category: '', price: '', cost: '' });
         setIsModalOpen(true);
     };
 
@@ -85,7 +83,6 @@ const Products = () => {
             category: product.category,
             price: product.price.toString(),
             cost: product.cost.toString(),
-            barcode: product.barcode || '',
         });
         setIsModalOpen(true);
     };
@@ -109,7 +106,7 @@ const Products = () => {
             // Update existing
             setProducts(products.map(p =>
                 p.id === editingProduct.id
-                    ? { ...p, name: formData.name, category: formData.category, price: parseFloat(formData.price), cost: parseFloat(formData.cost), barcode: formData.barcode }
+                    ? { ...p, name: formData.name, category: formData.category, price: parseFloat(formData.price), cost: parseFloat(formData.cost) }
                     : p
             ));
         } else {
@@ -120,7 +117,6 @@ const Products = () => {
                 category: formData.category,
                 price: parseFloat(formData.price),
                 cost: parseFloat(formData.cost),
-                barcode: formData.barcode,
                 icon: '📦',
                 isActive: true,
             };
@@ -284,16 +280,6 @@ const Products = () => {
                                             />
                                         </div>
                                     </div>
-
-                                    <div className="admin-form__group">
-                                        <label className="admin-form__label">Barcode (Optional)</label>
-                                        <input
-                                            type="text"
-                                            className="admin-form__input"
-                                            value={formData.barcode}
-                                            onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                                        />
-                                    </div>
                                 </div>
 
                                 <div className="admin-modal__footer">
@@ -325,7 +311,7 @@ const Products = () => {
                 confirmLabel="Delete"
                 cancelLabel="Cancel"
             />
-        </AdminPageLayout>
+        </AdminPageLayout >
     );
 };
 

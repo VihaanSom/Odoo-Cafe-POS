@@ -6,7 +6,8 @@ import Signup from './pages/Auth/Signup';
 import Dashboard from './pages/Dashboard/Dashboard';
 import TableView from './pages/POS/TableView';
 import OrderView from './pages/POS/OrderView';
-
+import TerminalSettings from './pages/POS/TerminalSettings';
+import KitchenDisplay from './pages/Kitchen/KitchenDisplay';
 // Admin Pages
 import Products from './pages/Inventory/Products';
 import ProductList from './pages/Inventory/ProductList';
@@ -49,6 +50,10 @@ function App() {
             <Route path="/pos" element={<TableView />} />
             <Route path="/pos/tables" element={<TableView />} />
             <Route path="/pos/order/:tableId" element={<OrderView />} />
+            <Route path="/pos/settings" element={<TerminalSettings />} />
+
+            {/* Kitchen Display */}
+            <Route path="/kitchen" element={<KitchenDisplay />} />
 
             {/* Default redirect to login */}
             <Route path="/" element={<Navigate to="/login" replace />} />
