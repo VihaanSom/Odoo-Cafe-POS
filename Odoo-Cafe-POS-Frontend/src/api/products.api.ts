@@ -218,7 +218,7 @@ export const createProduct = async (product: Omit<Product, 'id'>): Promise<Produ
             description: product.description,
             barcode: product.barcode,
             taxRate: product.taxes,
-            imageUrl: product.icon || product.image,
+            imageUrl: product.image || product.icon,
             priceRules: product.priceRules
         };
 
@@ -253,7 +253,7 @@ export const updateProduct = async (productId: string, updates: Partial<Product>
         if (updates.description) body.description = updates.description;
         if (updates.barcode) body.barcode = updates.barcode;
         if (updates.taxes) body.taxRate = updates.taxes;
-        if (updates.icon || updates.image) body.imageUrl = updates.icon || updates.image;
+        if (updates.image || updates.icon) body.imageUrl = updates.image || updates.icon;
         if (updates.priceRules) body.priceRules = updates.priceRules;
         if (updates.isActive !== undefined) body.isActive = updates.isActive;
         if (updates.status === 'archived') body.isActive = false;

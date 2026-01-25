@@ -9,6 +9,7 @@ const floorRoutes = require('./floor.routes');
 const tableRoutes = require('./table.routes');
 const kitchenRoutes = require('./kitchen.routes');
 const reportRoutes = require('./report.routes');
+const uploadRoutes = require('./upload.routes');
 
 // Dev B routes
 const sessionRoutes = require('./session.routes');
@@ -29,6 +30,7 @@ router.use('/floors', floorRoutes);
 router.use('/tables', tableRoutes);
 router.use('/kitchen', kitchenRoutes);
 router.use('/reports', reportRoutes);
+router.use('/upload', uploadRoutes);
 
 // Dev B: Orders & Payments
 router.use('/sessions', sessionRoutes);
@@ -37,3 +39,4 @@ router.use('/orders', orderRoutes);
 router.use('/payments', paymentRoutes);
 
 module.exports = router;
+

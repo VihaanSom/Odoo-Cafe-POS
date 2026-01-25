@@ -165,7 +165,13 @@ const Products = () => {
                                     layout
                                 >
                                     <td>
-                                        <div className="admin-table__image">{product.icon}</div>
+                                        <div className="admin-table__image">
+                                            {product.icon?.startsWith('http') ? (
+                                                <img src={product.icon} alt={product.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '8px' }} />
+                                            ) : (
+                                                product.icon || '📦'
+                                            )}
+                                        </div>
                                     </td>
                                     <td><strong>{product.name}</strong></td>
                                     <td>{getCategoryName(product.category)}</td>
