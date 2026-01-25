@@ -42,6 +42,12 @@ const COLORS = ['#007BFF', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'
 
 type Period = 'Today' | 'Weekly' | 'Monthly' | 'Yearly';
 
+// Augmented data type for chart
+interface ChartData extends HourlySalesData {
+    label?: string; // For formatted display (e.g., "Mon", "Jan 1")
+    fullDate?: string; // For tooltip
+}
+
 const AnalyticsDashboard = () => {
     const navigate = useNavigate();
     const [period, setPeriod] = useState<Period>('Today');
@@ -51,7 +57,7 @@ const AnalyticsDashboard = () => {
     const [totalSales, setTotalSales] = useState(0);
     const [totalOrders, setTotalOrders] = useState(0);
     const [avgOrderValue, setAvgOrderValue] = useState(0);
-    const [salesData, setSalesData] = useState<HourlySalesData[]>([]);
+    const [salesData, setSalesData] = useState<ChartData[]>([]);
     const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
 
     // Load Data based on period
@@ -76,7 +82,12 @@ const AnalyticsDashboard = () => {
                     setTotalSales(daily.totalSales);
                     setTotalOrders(daily.orderCount);
                     setAvgOrderValue(daily.orderCount > 0 ? daily.totalSales / daily.orderCount : 0);
-                    setSalesData(hourly);
+                    // Format hourly data
+                    setSalesData(hourly.map(h => ({
+                        ...h,
+                        label: `${h.hour}:00`,
+                        fullDate: `${h.hour}:00 - ${h.hour + 1}:00`
+                    })));
                     setTopProducts(products);
                 }
                 // For other periods, we would fetch range data
@@ -100,8 +111,60 @@ const AnalyticsDashboard = () => {
                     setAvgOrderValue(range.orderCount > 0 ? range.totalSales / range.orderCount : 0);
                     setTopProducts(products);
 
-                    // Clear chart for non-today periods or mock it
-                    setSalesData([]);
+                    // Process real daily breakdown data
+                    const breakdown = range.dailyBreakdown || [];
+                    const breakdownMap = new Map(breakdown.map(b => [b.date.split('T')[0], b]));
+
+                    let chartData: ChartData[] = [];
+
+                    if (period === 'Yearly') {
+                        // Aggregate by month for Yearly view
+                        const months = Array.from({ length: 12 }, (_, i) => {
+                            const d = new Date(now.getFullYear(), i, 1);
+                            return {
+                                hour: i + 1,
+                                sales: 0,
+                                orders: 0,
+                                label: d.toLocaleDateString('en-US', { month: 'short' }),
+                                fullDate: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                            };
+                        });
+
+                        breakdown.forEach(day => {
+                            const date = new Date(day.date);
+                            const monthIdx = date.getMonth(); // 0-11
+                            months[monthIdx].sales += day.sales;
+                            months[monthIdx].orders += day.orders;
+                        });
+                        chartData = months;
+                    } else {
+                        // Daily breakdown for Weekly/Monthly
+                        const points = period === 'Weekly' ? 7 : 30; // Approx for monthly
+                        chartData = Array.from({ length: points }, (_, i) => {
+                            const d = new Date(endDate);
+                            d.setDate(d.getDate() - (points - 1 - i));
+                            const dateStr = d.toISOString().split('T')[0];
+                            const data = breakdownMap.get(dateStr);
+
+                            // Format Label based on period
+                            let label = '';
+                            if (period === 'Weekly') {
+                                label = d.toLocaleDateString('en-US', { weekday: 'short' }); // Mon, Tue
+                            } else {
+                                label = d.getDate().toString(); // 1, 2, 3
+                            }
+
+                            return {
+                                hour: d.getDate(), // Show day of month
+                                sales: data ? data.sales : 0,
+                                orders: data ? data.orders : 0,
+                                label: label,
+                                fullDate: d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+                            };
+                        });
+                    }
+
+                    setSalesData(chartData);
                 }
             } catch (error) {
                 console.error('Failed to load analytics:', error);
@@ -246,10 +309,28 @@ const AnalyticsDashboard = () => {
                                         <stop offset="95%" stopColor="#007BFF" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <XAxis dataKey="hour" tickFormatter={(h) => `${h}:00`} />
+                                <XAxis
+                                    dataKey="label"
+                                    tick={{ fontSize: 12 }}
+                                    interval={period === 'Monthly' ? 5 : 0}
+                                />
                                 <YAxis />
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                <Tooltip formatter={(value) => `₹${value}`} />
+                                <Tooltip
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            const dataItem = payload[0].payload as ChartData;
+                                            return (
+                                                <div style={{ background: 'white', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}>
+                                                    <p style={{ fontWeight: 'bold', margin: '0 0 5px' }}>{dataItem.fullDate || label}</p>
+                                                    <p style={{ margin: 0, color: '#007BFF' }}>Sales: ₹{Number(payload[0].value).toLocaleString()}</p>
+                                                    <p style={{ margin: 0, fontSize: '0.85em', color: '#666' }}>Orders: {dataItem.orders}</p>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
+                                />
                                 <Area
                                     type="monotone"
                                     dataKey="sales"

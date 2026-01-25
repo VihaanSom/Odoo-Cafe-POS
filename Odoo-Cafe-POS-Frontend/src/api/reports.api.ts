@@ -24,6 +24,11 @@ export interface SalesRangeResponse {
     endDate: string;
     totalSales: number;
     orderCount: number;
+    dailyBreakdown?: Array<{
+        date: string;
+        sales: number;
+        orders: number;
+    }>;
 }
 
 export interface TopProduct {

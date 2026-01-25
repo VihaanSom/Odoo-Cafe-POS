@@ -7,10 +7,10 @@ const { ORDER_STATUS } = require('../utils/constants');
 const getDailySales = async (branchId, date) => {
     const targetDate = date ? new Date(date) : new Date();
     targetDate.setHours(0, 0, 0, 0);
-    
+
     const nextDay = new Date(targetDate);
     nextDay.setDate(nextDay.getDate() + 1);
-    
+
     const where = {
         status: ORDER_STATUS.COMPLETED,
         createdAt: {
@@ -18,15 +18,15 @@ const getDailySales = async (branchId, date) => {
             lt: nextDay
         }
     };
-    
+
     if (branchId) where.branchId = branchId;
-    
+
     const result = await prisma.order.aggregate({
         _sum: { totalAmount: true },
         _count: true,
         where
     });
-    
+
     return {
         date: targetDate.toISOString().split('T')[0],
         totalSales: result._sum.totalAmount || 0,
@@ -40,28 +40,44 @@ const getDailySales = async (branchId, date) => {
 const getSalesByRange = async (branchId, startDate, endDate) => {
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
-    
+
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
-    
+
     const where = {
         status: ORDER_STATUS.COMPLETED,
         createdAt: { gte: start, lte: end }
     };
-    
+
     if (branchId) where.branchId = branchId;
-    
-    const result = await prisma.order.aggregate({
-        _sum: { totalAmount: true },
-        _count: true,
-        where
+
+    // Get all orders for breakdown
+    const orders = await prisma.order.findMany({
+        where,
+        select: { createdAt: true, totalAmount: true }
     });
-    
+
+    let totalSales = 0;
+    const dailyBreakdown = {};
+
+    orders.forEach(order => {
+        const amount = parseFloat(order.totalAmount) || 0;
+        totalSales += amount;
+
+        const dateKey = order.createdAt.toISOString().split('T')[0];
+        if (!dailyBreakdown[dateKey]) {
+            dailyBreakdown[dateKey] = { date: dateKey, sales: 0, orders: 0 };
+        }
+        dailyBreakdown[dateKey].sales += amount;
+        dailyBreakdown[dateKey].orders += 1;
+    });
+
     return {
         startDate: startDate,
         endDate: endDate,
-        totalSales: result._sum.totalAmount || 0,
-        orderCount: result._count || 0
+        totalSales: totalSales,
+        orderCount: orders.length,
+        dailyBreakdown: Object.values(dailyBreakdown).sort((a, b) => a.date.localeCompare(b.date))
     };
 };
 
@@ -73,7 +89,7 @@ const getTopProducts = async (branchId, limit = 10) => {
     if (branchId) {
         where.order = { branchId };
     }
-    
+
     const products = await prisma.orderItem.groupBy({
         by: ['productId'],
         _sum: { quantity: true },
@@ -81,16 +97,16 @@ const getTopProducts = async (branchId, limit = 10) => {
         orderBy: { _sum: { quantity: 'desc' } },
         take: limit
     });
-    
+
     // Fetch product details
     const productIds = products.map(p => p.productId).filter(Boolean);
     const productDetails = await prisma.product.findMany({
         where: { id: { in: productIds } },
         select: { id: true, name: true, price: true }
     });
-    
+
     const productMap = new Map(productDetails.map(p => [p.id, p]));
-    
+
     return products.map(p => ({
         product: productMap.get(p.productId) || { id: p.productId },
         totalQuantity: p._sum.quantity || 0
@@ -102,13 +118,13 @@ const getTopProducts = async (branchId, limit = 10) => {
  */
 const getOrdersByStatus = async (branchId) => {
     const where = branchId ? { branchId } : {};
-    
+
     const statuses = await prisma.order.groupBy({
         by: ['status'],
         _count: true,
         where
     });
-    
+
     return statuses.map(s => ({
         status: s.status,
         count: s._count
@@ -121,17 +137,17 @@ const getOrdersByStatus = async (branchId) => {
 const getHourlySales = async (branchId, date) => {
     const targetDate = date ? new Date(date) : new Date();
     targetDate.setHours(0, 0, 0, 0);
-    
+
     const nextDay = new Date(targetDate);
     nextDay.setDate(nextDay.getDate() + 1);
-    
+
     const where = {
         status: ORDER_STATUS.COMPLETED,
         createdAt: { gte: targetDate, lt: nextDay }
     };
-    
+
     if (branchId) where.branchId = branchId;
-    
+
     const orders = await prisma.order.findMany({
         where,
         select: {
@@ -139,19 +155,19 @@ const getHourlySales = async (branchId, date) => {
             totalAmount: true
         }
     });
-    
+
     // Group by hour
     const hourlyData = {};
     for (let i = 0; i < 24; i++) {
         hourlyData[i] = { hour: i, sales: 0, orders: 0 };
     }
-    
+
     orders.forEach(order => {
         const hour = new Date(order.createdAt).getHours();
         hourlyData[hour].sales += parseFloat(order.totalAmount) || 0;
         hourlyData[hour].orders += 1;
     });
-    
+
     return Object.values(hourlyData);
 };
 
