@@ -393,7 +393,7 @@ const KitchenDisplay = () => {
                                 >
                                     <div className="kitchen-ticket__header">
                                         <span className="kitchen-ticket__number">{order.orderNumber}</span>
-                                        {order.tableName && (
+                                        {order.tableName && order.tableName !== 'undefined' && (
                                             <span className="kitchen-ticket__table">{order.tableName}</span>
                                         )}
                                     </div>

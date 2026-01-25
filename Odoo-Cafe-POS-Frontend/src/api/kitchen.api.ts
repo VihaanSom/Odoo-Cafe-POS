@@ -112,11 +112,11 @@ export interface KitchenOrder {
 // Map backend order to frontend kitchen order
 const mapBackendOrderToKitchen = (order: BackendOrder): KitchenOrder => ({
     id: order.id,
-    orderNumber: `#${order.orderNumber}`,
-    customerName: order.table?.name || order.creator?.name || 'Walk-in',
+    orderNumber: order.orderNumber ? `#${order.orderNumber}` : `#${order.id.substring(0, 8).toUpperCase()}`,
+    customerName: order.creator?.name || 'Walk-in',
     status: mapBackendStatusToFrontend(order.status),
     createdAt: order.createdAt,
-    tableName: order.table?.name,
+    tableName: order.table ? `Table #${(order.table as any).tableNumber || order.table.name || order.table.id}` : undefined,
     notes: order.notes,
     items: order.orderItems.map(item => ({
         id: item.id,
