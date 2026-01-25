@@ -10,6 +10,9 @@ router.use(authMiddleware);
 // Create new order (can include initial items)
 router.post('/', orderController.createOrder);
 
+// Get all orders
+router.get('/', orderController.getAllOrders);
+
 // Get active order for table (View Bill) - MUST be before /:id
 router.get('/table/:tableId/active', orderController.getActiveOrderByTable);
 

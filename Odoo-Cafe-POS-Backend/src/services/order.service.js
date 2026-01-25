@@ -232,10 +232,31 @@ const getActiveOrderByTable = async (tableId) => {
     return order;
 };
 
+/**
+ * Get All Orders (Admin/Dashboard)
+ */
+const getAllOrders = async () => {
+    const orders = await prisma.order.findMany({
+        orderBy: {
+            createdAt: 'desc'
+        },
+        include: {
+            orderItems: {
+                include: {
+                    product: true
+                }
+            },
+            table: true
+        }
+    });
+    return orders;
+};
+
 module.exports = {
     createOrder,
     addOrderItems,
     sendToKitchen,
     getOrderById,
-    getActiveOrderByTable
+    getActiveOrderByTable,
+    getAllOrders
 };

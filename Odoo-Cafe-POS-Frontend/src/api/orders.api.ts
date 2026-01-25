@@ -525,6 +525,39 @@ export const getOrderByIdBackendApi = async (orderId: string): Promise<OrderResp
 };
 
 /**
+ * Get all orders from backend
+ * GET /api/orders
+ */
+export const getOrdersBackendApi = async (): Promise<{ success: boolean; orders: Order[]; error?: string }> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/orders`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                orders: [],
+                error: data.message || 'Failed to fetch orders',
+            };
+        }
+
+        const orders: Order[] = (data.orders || []).map(mapBackendOrder);
+        return { success: true, orders };
+    } catch (error) {
+        console.error('Get orders error:', error);
+        return {
+            success: false,
+            orders: [],
+            error: 'Network error. Please try again.',
+        };
+    }
+};
+
+/**
  * Clear all mock orders (for testing)
  */
 export const clearMockOrders = (): void => {

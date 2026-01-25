@@ -2,7 +2,7 @@
  * Orders Management Page
  * Backend view with bulk selection and action buttons
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, X, Receipt, Archive, Trash2, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -32,84 +32,54 @@ interface Order {
     paymentMethod: string;
 }
 
-// Mock data
-const mockOrders: Order[] = [
-    {
-        id: 'order-1',
-        orderNumber: '001',
-        session: '01',
-        date: '5 Jan 2026',
-        total: 350,
-        customer: 'Eric',
-        status: 'COMPLETED',
-        table: 'T-02',
-        orderType: 'DINE_IN',
-        items: [
-            { name: 'Butter Chicken', quantity: 2, price: 150 },
-            { name: 'Naan Bread', quantity: 2, price: 25 },
-        ],
-        subtotal: 350,
-        tax: 17.50,
-        paymentMethod: 'UPI',
-    },
-    {
-        id: 'order-2',
-        orderNumber: '002',
-        session: '01',
-        date: '5 Jan 2026',
-        total: 350,
-        customer: 'Smith',
-        status: 'DRAFT',
-        table: 'T-03',
-        orderType: 'DINE_IN',
-        items: [
-            { name: 'Pizza', quantity: 1, price: 350 },
-        ],
-        subtotal: 350,
-        tax: 17.50,
-        paymentMethod: '-',
-    },
-    {
-        id: 'order-3',
-        orderNumber: '003',
-        session: '01',
-        date: '5 Jan 2026',
-        total: 350,
-        customer: 'Jacob',
-        status: 'COMPLETED',
-        table: 'P-01',
-        orderType: 'DINE_IN',
-        items: [
-            { name: 'Grilled Salmon', quantity: 1, price: 350 },
-        ],
-        subtotal: 350,
-        tax: 17.50,
-        paymentMethod: 'CARD',
-    },
-    {
-        id: 'order-4',
-        orderNumber: '004',
-        session: '02',
-        date: '6 Jan 2026',
-        total: 520,
-        customer: 'Altruistic Cormorant',
-        status: 'ARCHIVED',
-        table: '-',
-        orderType: 'TAKEAWAY',
-        items: [
-            { name: 'Combo Meal', quantity: 2, price: 260 },
-        ],
-        subtotal: 520,
-        tax: 26,
-        paymentMethod: 'CASH',
-    },
-];
+import { getOrdersBackendApi } from '../../api/orders.api';
+
+// No mock data needed
 
 const Orders = () => {
-    const [orders, setOrders] = useState<Order[]>(mockOrders);
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+    // Fetch orders on mount
+    useEffect(() => {
+        const fetchOrders = async () => {
+            setIsLoading(true);
+            try {
+                const result = await getOrdersBackendApi();
+                if (result.success && result.orders) {
+                    // Map API orders to local interface
+                    const mappedOrders: Order[] = result.orders.map(o => ({
+                        id: o.id,
+                        orderNumber: o.id.slice(-4).toUpperCase(), // Or use a proper number field if available
+                        session: o.session_id ? o.session_id.slice(-4) : '-',
+                        date: new Date(o.created_at || Date.now()).toLocaleDateString(),
+                        total: o.total_amount,
+                        customer: o.customer_name || 'Walk-in',
+                        status: o.status === 'CREATED' || o.status === 'IN_PROGRESS' || o.status === 'READY' ? 'DRAFT' : 'COMPLETED', // Simplify status mapping
+                        table: o.table_id ? `Table` : 'Takeaway', // Ideally fetch table name
+                        orderType: o.order_type,
+                        items: o.items.map(i => ({
+                            name: i.product_name || 'Unknown',
+                            quantity: i.quantity,
+                            price: i.price_at_time
+                        })),
+                        subtotal: o.items.reduce((sum, i) => sum + (i.price_at_time * i.quantity), 0),
+                        tax: o.total_amount - (o.items.reduce((sum, i) => sum + (i.price_at_time * i.quantity), 0)), // Approximate tax
+                        paymentMethod: 'CASH' // Pending backend support
+                    }));
+                    setOrders(mappedOrders);
+                }
+            } catch (error) {
+                console.error('Failed to fetch orders', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchOrders();
+    }, []);
 
     // Confirm dialog state
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -234,6 +204,7 @@ const Orders = () => {
                 )}
 
                 {/* Orders Table */}
+                {isLoading && <div className="admin-loading">Loading orders...</div>}
                 <div className="admin-table">
                     <table>
                         <thead>
@@ -452,6 +423,15 @@ const Orders = () => {
 
                 .admin-table tbody tr.row-selected:hover {
                     background: #B2DFDB !important;
+                }
+
+                .admin-loading {
+                    text-align: center;
+                    padding: 2rem;
+                    color: #666;
+                    background: white;
+                    border-radius: 8px;
+                    margin-bottom: 1rem;
                 }
             `}</style>
 
