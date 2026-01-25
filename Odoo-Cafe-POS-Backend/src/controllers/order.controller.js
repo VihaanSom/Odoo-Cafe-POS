@@ -1,5 +1,18 @@
 const orderService = require('../services/order.service');
 const paymentService = require('../services/payment.service');
+const socketUtil = require('../utils/socket');
+
+/**
+ * Emit kitchen order update to all connected clients
+ */
+const emitKitchenNewOrder = (order) => {
+    try {
+        const io = socketUtil.getIO();
+        io.emit('kitchen:newOrder', { order });
+    } catch (error) {
+        console.warn('Socket not available for kitchen update:', error.message);
+    }
+};
 
 const createOrder = async (req, res, next) => {
     try {
@@ -33,6 +46,10 @@ const sendToKitchen = async (req, res, next) => {
     try {
         const { id } = req.params;
         const result = await orderService.sendToKitchen(id);
+
+        // Emit socket event for new order in kitchen
+        emitKitchenNewOrder(result.order);
+
         res.json(result);
     } catch (error) {
         next(error);
