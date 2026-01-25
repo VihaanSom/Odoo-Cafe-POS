@@ -19,7 +19,12 @@ const paymentRoutes = require('./payment.routes');
 const paymentSettingsRoutes = require('./payment-settings.routes');
 const customerRoutes = require('./customer.routes');
 
+const dashboardRoutes = require('./dashboard.routes');
+
 const router = express.Router();
+
+// Dashboard Stats
+router.use('/dashboard', dashboardRoutes);
 
 // Auth
 router.use('/auth', authRoutes);

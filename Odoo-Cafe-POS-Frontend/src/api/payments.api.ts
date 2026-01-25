@@ -59,3 +59,74 @@ export const getPaymentsApi = async (filters: { method?: string; orderNumber?: s
         return [];
     }
 };
+
+export type PaymentMethod = 'CASH' | 'UPI' | 'CARD';
+
+interface PaymentRequest {
+    orderId: string;
+    amount: number;
+    method: PaymentMethod;
+    transactionReference?: string;
+}
+
+interface PaymentResponse {
+    success: boolean;
+    payment?: any;
+    error?: string;
+}
+
+/**
+ * Process payment via backend
+ */
+export const processPaymentBackendApi = async (data: PaymentRequest): Promise<PaymentResponse> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/payments`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                error: result.message || 'Payment failed'
+            };
+        }
+
+        return {
+            success: true,
+            payment: result.payment
+        };
+    } catch (error) {
+        console.error('Process payment error:', error);
+        return {
+            success: false,
+            error: 'Network error'
+        };
+    }
+};
+
+/**
+ * Generate receipt via backend
+ */
+export const generateReceiptBackendApi = async (orderId: string): Promise<any | null> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/payments/orders/${encodeURIComponent(orderId)}/receipt`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+        });
+
+        if (!response.ok) {
+            console.error('Failed to generate receipt');
+            return null;
+        }
+
+        const data = await response.json();
+        return data.receipt;
+    } catch (error) {
+        console.error('Generate receipt error:', error);
+        return null;
+    }
+};

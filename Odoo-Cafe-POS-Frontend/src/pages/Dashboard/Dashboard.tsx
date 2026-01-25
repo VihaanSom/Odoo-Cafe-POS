@@ -20,6 +20,7 @@ import { useAuth } from '../../store/auth.store';
 import { useSession } from '../../store/session.store';
 import { getTerminalsApi, type Terminal } from '../../api/branches.api';
 import { setCustomerDisplaySession } from '../CustomerDisplay/CustomerDisplay';
+import { getDashboardStatsApi, type DashboardStats } from '../../api/dashboard.api';
 import StatCard from '../../components/common/StatCard';
 import './Dashboard.css';
 
@@ -66,6 +67,49 @@ const Dashboard = () => {
 
     // Track which terminal is currently starting a session
     const [startingTerminalId, setStartingTerminalId] = useState<string | null>(null);
+
+    // Dashboard stats state
+    const [stats, setStats] = useState<DashboardStats>({
+        lastClosingDate: null,
+        todaySales: 0,
+        activeSessionOpenedAt: null
+    });
+    const [sessionDuration, setSessionDuration] = useState('0h 0m');
+
+    // Fetch dashboard stats
+    useEffect(() => {
+        const loadStats = async () => {
+            const data = await getDashboardStatsApi();
+            setStats(data);
+        };
+        loadStats();
+        // Refresh stats periodically
+        const interval = setInterval(loadStats, 60000); // every minute
+        return () => clearInterval(interval);
+    }, []);
+
+    // Calculate session duration
+    useEffect(() => {
+        if (!isSessionActive || !stats.activeSessionOpenedAt) {
+            setSessionDuration('0h 0m');
+            return;
+        }
+
+        const updateDuration = () => {
+            const start = new Date(stats.activeSessionOpenedAt!).getTime();
+            const now = new Date().getTime();
+            const diff = now - start;
+
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+            setSessionDuration(`${hours}h ${minutes}m`);
+        };
+
+        updateDuration();
+        const interval = setInterval(updateDuration, 60000);
+        return () => clearInterval(interval);
+    }, [isSessionActive, stats.activeSessionOpenedAt]);
 
     // Fetch terminals from backend on mount
     useEffect(() => {
@@ -204,7 +248,7 @@ const Dashboard = () => {
                 >
                     <StatCard
                         title="Last Closing Date"
-                        value={session?.closed_at ? formatDate(session.closed_at) : 'No Previous Session'}
+                        value={stats.lastClosingDate ? formatDate(stats.lastClosingDate) : 'No Previous Session'}
                         icon={<Calendar size={24} />}
                         variant="info"
                     />
@@ -217,10 +261,10 @@ const Dashboard = () => {
                 >
                     <StatCard
                         title="Today's Sales"
-                        value="₹0.00"
+                        value={`₹${stats.todaySales.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
                         icon={<DollarSign size={24} />}
                         variant="success"
-                        subtitle="Session not started"
+                        subtitle={isSessionActive ? "Current session" : "All sessions today"}
                     />
                 </motion.div>
 
@@ -231,7 +275,7 @@ const Dashboard = () => {
                 >
                     <StatCard
                         title="Session Duration"
-                        value={isSessionActive ? 'Active' : '0h 0m'}
+                        value={isSessionActive ? sessionDuration : '0h 0m'}
                         icon={<Clock size={24} />}
                         variant={isSessionActive ? 'success' : 'default'}
                     />
