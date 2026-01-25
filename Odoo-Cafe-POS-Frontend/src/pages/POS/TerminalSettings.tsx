@@ -5,7 +5,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, X, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Plus, X, MoreVertical, Loader } from 'lucide-react';
+import { getTerminalsApi, createTerminalApi, getBranches, type Terminal } from '../../api/branches.api';
 import './TerminalSettings.css';
 
 interface POSTerminal {
@@ -21,51 +22,62 @@ interface POSTerminal {
     };
 }
 
-// Load from localStorage or use defaults
-const loadTerminals = (): POSTerminal[] => {
-    const saved = localStorage.getItem('pos_terminals_v1');
-    if (saved) {
-        try {
-            return JSON.parse(saved);
-        } catch {
-            // Return defaults
-        }
-    }
-    return [
-        {
-            id: 'terminal-001-main',
-            name: 'Main Terminal',
-            lastOpen: '2026-01-01',
-            lastSell: 5000,
-            paymentMethods: {
-                cash: true,
-                digital: true,
-                upi: false,
-                upiId: '',
-            },
-        },
-    ];
-};
+// Map backend Terminal to POSTerminal for display
+const mapTerminalToPOS = (t: Terminal): POSTerminal => ({
+    id: t.id,
+    name: t.terminalName,
+    lastOpen: t.createdAt,
+    lastSell: undefined,
+    paymentMethods: {
+        cash: true,
+        digital: true,
+        upi: false,
+        upiId: '',
+    },
+});
 
 const TerminalSettings = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const [terminals, setTerminals] = useState<POSTerminal[]>(loadTerminals);
+    const [terminals, setTerminals] = useState<POSTerminal[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isCreating, setIsCreating] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    // Get terminal ID from URL param, or fall back to first terminal
-    const initialTerminalId = searchParams.get('terminal') || loadTerminals()[0]?.id || '';
-    const [selectedTerminalId, setSelectedTerminalId] = useState<string>(initialTerminalId);
+    const [selectedTerminalId, setSelectedTerminalId] = useState<string>('');
     const [isNewModalOpen, setIsNewModalOpen] = useState(false);
     const [newTerminalName, setNewTerminalName] = useState('');
 
     const selectedTerminal = terminals.find(t => t.id === selectedTerminalId) || terminals[0];
 
-    // Save to localStorage on change
+    // Fetch terminals from backend on mount
     useEffect(() => {
-        localStorage.setItem('pos_terminals_v1', JSON.stringify(terminals));
-    }, [terminals]);
+        const loadTerminals = async () => {
+            setIsLoading(true);
+            try {
+                const backendTerminals = await getTerminalsApi();
+                const mappedTerminals = backendTerminals.map(mapTerminalToPOS);
+                setTerminals(mappedTerminals);
+
+                // Set selected terminal from URL param or first available
+                const urlTerminalId = searchParams.get('terminal');
+                if (urlTerminalId && mappedTerminals.find(t => t.id === urlTerminalId)) {
+                    setSelectedTerminalId(urlTerminalId);
+                } else if (mappedTerminals.length > 0) {
+                    setSelectedTerminalId(mappedTerminals[0].id);
+                }
+            } catch (err) {
+                console.error('Failed to load terminals:', err);
+                setError('Failed to load terminals');
+            }
+            setIsLoading(false);
+        };
+        loadTerminals();
+    }, [searchParams]);
 
     const handlePaymentChange = (field: 'cash' | 'digital' | 'upi', value: boolean) => {
+        // For now, payment methods are local only (not persisted to backend)
+        // Could be extended to save to backend if needed
         setTerminals(prev => prev.map(t =>
             t.id === selectedTerminalId
                 ? { ...t, paymentMethods: { ...t.paymentMethods, [field]: value } }
@@ -81,24 +93,41 @@ const TerminalSettings = () => {
         ));
     };
 
-    const handleCreateTerminal = () => {
+    const handleCreateTerminal = async () => {
         if (!newTerminalName.trim()) return;
 
-        const newTerminal: POSTerminal = {
-            id: `terminal-${Date.now()}`,
-            name: newTerminalName.trim(),
-            paymentMethods: {
-                cash: true,
-                digital: false,
-                upi: false,
-                upiId: '',
-            },
-        };
+        setIsCreating(true);
+        setError(null);
 
-        setTerminals([...terminals, newTerminal]);
-        setSelectedTerminalId(newTerminal.id);
-        setNewTerminalName('');
-        setIsNewModalOpen(false);
+        try {
+            // Get the first branch to assign to the terminal
+            let branchId: string | undefined;
+            try {
+                const branches = await getBranches();
+                if (branches.length > 0) {
+                    branchId = branches[0].id;
+                }
+            } catch {
+                // No branches found, will create without branchId
+            }
+
+            const response = await createTerminalApi(newTerminalName.trim(), branchId);
+
+            if (response.success && response.terminal) {
+                const newPOSTerminal = mapTerminalToPOS(response.terminal);
+                setTerminals(prev => [...prev, newPOSTerminal]);
+                setSelectedTerminalId(newPOSTerminal.id);
+                setNewTerminalName('');
+                setIsNewModalOpen(false);
+            } else {
+                setError(response.error || 'Failed to create terminal');
+            }
+        } catch (err) {
+            console.error('Failed to create terminal:', err);
+            setError('Failed to create terminal');
+        }
+
+        setIsCreating(false);
     };
 
     const formatDate = (dateString?: string) => {
@@ -134,6 +163,14 @@ const TerminalSettings = () => {
                     </button>
                 </header>
 
+                {/* Error Message */}
+                {error && (
+                    <div className="terminal-settings__error">
+                        {error}
+                        <button onClick={() => setError(null)}>×</button>
+                    </div>
+                )}
+
                 {/* Content Grid */}
                 <div className="terminal-settings__content">
                     {/* Point of Sale Section */}
@@ -142,15 +179,21 @@ const TerminalSettings = () => {
                             <h2>Point of Sale</h2>
                         </div>
                         <div className="terminal-settings__terminals">
-                            {terminals.map(terminal => (
-                                <button
-                                    key={terminal.id}
-                                    className={`terminal-settings__terminal-btn ${selectedTerminalId === terminal.id ? 'terminal-settings__terminal-btn--active' : ''}`}
-                                    onClick={() => setSelectedTerminalId(terminal.id)}
-                                >
-                                    {terminal.name}
-                                </button>
-                            ))}
+                            {isLoading ? (
+                                <span className="terminal-settings__loading">Loading...</span>
+                            ) : terminals.length === 0 ? (
+                                <span className="terminal-settings__empty">No terminals yet</span>
+                            ) : (
+                                terminals.map(terminal => (
+                                    <button
+                                        key={terminal.id}
+                                        className={`terminal-settings__terminal-btn ${selectedTerminalId === terminal.id ? 'terminal-settings__terminal-btn--active' : ''}`}
+                                        onClick={() => setSelectedTerminalId(terminal.id)}
+                                    >
+                                        {terminal.name}
+                                    </button>
+                                ))
+                            )}
                             <button
                                 className="terminal-settings__add-btn"
                                 onClick={() => setIsNewModalOpen(true)}
@@ -162,52 +205,54 @@ const TerminalSettings = () => {
                     </section>
 
                     {/* Payment Method Section */}
-                    <section className="terminal-settings__section">
-                        <div className="terminal-settings__section-header">
-                            <h2>Payment Method</h2>
-                        </div>
-                        <div className="terminal-settings__payments">
-                            <div className="terminal-settings__payment-row">
-                                <label className="terminal-settings__checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedTerminal?.paymentMethods.cash || false}
-                                        onChange={(e) => handlePaymentChange('cash', e.target.checked)}
-                                    />
-                                    <span className="terminal-settings__checkbox-text">Cash</span>
-                                </label>
-                                <label className="terminal-settings__checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedTerminal?.paymentMethods.digital || false}
-                                        onChange={(e) => handlePaymentChange('digital', e.target.checked)}
-                                    />
-                                    <span className="terminal-settings__checkbox-text">Digital (Bank, Card)</span>
-                                </label>
+                    {selectedTerminal && (
+                        <section className="terminal-settings__section">
+                            <div className="terminal-settings__section-header">
+                                <h2>Payment Method</h2>
                             </div>
-                            <div className="terminal-settings__payment-row terminal-settings__payment-row--upi">
-                                <label className="terminal-settings__checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedTerminal?.paymentMethods.upi || false}
-                                        onChange={(e) => handlePaymentChange('upi', e.target.checked)}
-                                    />
-                                    <span className="terminal-settings__checkbox-text">QR Payment (UPI)</span>
-                                </label>
-                                {selectedTerminal?.paymentMethods.upi && (
-                                    <div className="terminal-settings__upi-input">
-                                        <label>UPI ID</label>
+                            <div className="terminal-settings__payments">
+                                <div className="terminal-settings__payment-row">
+                                    <label className="terminal-settings__checkbox-label">
                                         <input
-                                            type="text"
-                                            placeholder="e.g. 123@ybl.com"
-                                            value={selectedTerminal?.paymentMethods.upiId || ''}
-                                            onChange={(e) => handleUpiIdChange(e.target.value)}
+                                            type="checkbox"
+                                            checked={selectedTerminal?.paymentMethods.cash || false}
+                                            onChange={(e) => handlePaymentChange('cash', e.target.checked)}
                                         />
-                                    </div>
-                                )}
+                                        <span className="terminal-settings__checkbox-text">Cash</span>
+                                    </label>
+                                    <label className="terminal-settings__checkbox-label">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedTerminal?.paymentMethods.digital || false}
+                                            onChange={(e) => handlePaymentChange('digital', e.target.checked)}
+                                        />
+                                        <span className="terminal-settings__checkbox-text">Digital (Bank, Card)</span>
+                                    </label>
+                                </div>
+                                <div className="terminal-settings__payment-row terminal-settings__payment-row--upi">
+                                    <label className="terminal-settings__checkbox-label">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedTerminal?.paymentMethods.upi || false}
+                                            onChange={(e) => handlePaymentChange('upi', e.target.checked)}
+                                        />
+                                        <span className="terminal-settings__checkbox-text">QR Payment (UPI)</span>
+                                    </label>
+                                    {selectedTerminal?.paymentMethods.upi && (
+                                        <div className="terminal-settings__upi-input">
+                                            <label>UPI ID</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. 123@ybl.com"
+                                                value={selectedTerminal?.paymentMethods.upiId || ''}
+                                                onChange={(e) => handleUpiIdChange(e.target.value)}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    </section>
+                        </section>
+                    )}
                 </div>
             </main>
 
@@ -245,6 +290,9 @@ const TerminalSettings = () => {
                                         autoFocus
                                     />
                                 </label>
+                                <p className="terminal-settings__modal-hint">
+                                    The terminal will be assigned to the default branch automatically.
+                                </p>
                             </div>
                             <div className="terminal-settings__modal-footer">
                                 <button
@@ -256,9 +304,9 @@ const TerminalSettings = () => {
                                 <button
                                     className="terminal-settings__modal-btn terminal-settings__modal-btn--primary"
                                     onClick={handleCreateTerminal}
-                                    disabled={!newTerminalName.trim()}
+                                    disabled={!newTerminalName.trim() || isCreating}
                                 >
-                                    Save
+                                    {isCreating ? 'Creating...' : 'Save'}
                                 </button>
                             </div>
                         </motion.div>

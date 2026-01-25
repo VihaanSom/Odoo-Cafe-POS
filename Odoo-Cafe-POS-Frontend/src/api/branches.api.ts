@@ -311,7 +311,7 @@ export const createTerminalApi = async (
 
         return {
             success: true,
-            terminal: mapBackendTerminal(data),
+            terminal: mapBackendTerminal(data.terminal),
         };
     } catch (error) {
         console.error('Create terminal error:', error);

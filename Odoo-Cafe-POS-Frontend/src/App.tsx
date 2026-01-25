@@ -52,6 +52,10 @@ function App() {
               <Route path="/pos" element={<TableView />} />
               <Route path="/pos/tables" element={<TableView />} />
               <Route path="/pos/order/:tableId" element={<OrderView />} />
+              <Route path="/pos/settings" element={<TerminalSettings />} />
+
+              {/* Kitchen Display */}
+              <Route path="/kitchen" element={<KitchenDisplay />} />
 
               {/* Default redirect to login */}
               <Route path="/" element={<Navigate to="/login" replace />} />
