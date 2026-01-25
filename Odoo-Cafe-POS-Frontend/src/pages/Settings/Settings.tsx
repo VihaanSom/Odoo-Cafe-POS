@@ -12,6 +12,7 @@ import {
     CreditCard,
     LayoutGrid,
     ArrowLeft,
+    TrendingUp,
 } from 'lucide-react';
 import './Settings.css';
 
@@ -65,6 +66,13 @@ const settingsLinks: SettingsLink[] = [
         icon: <CreditCard size={24} />,
         path: '/dashboard/payments',
         color: '#8B5CF6',
+    },
+    {
+        title: 'Analytics',
+        subtitle: 'Sales reports',
+        icon: <TrendingUp size={24} />,
+        path: '/dashboard/analytics',
+        color: '#007BFF',
     },
 ];
 

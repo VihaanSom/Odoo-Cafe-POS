@@ -10,6 +10,11 @@ import {
     type CreateOrderBackendRequest
 } from '../../api/orders.api';
 import { processPaymentBackendApi, generateReceiptBackendApi, type PaymentMethod } from '../../api/payments.api';
+import {
+    setCustomerDisplayCart,
+    setCustomerDisplayPayment,
+    setCustomerDisplayThankYou
+} from '../../pages/CustomerDisplay/CustomerDisplay';
 import { getTerminalPaymentSettingsApi, type PaymentSettings } from '../../api/payment-settings.api';
 import { QRCodeCanvas } from 'qrcode.react';
 
@@ -47,6 +52,23 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
         return `₹${numPrice.toFixed(2)}`;
     };
 
+    // Sync cart changes to customer display
+    useEffect(() => {
+        if (!session?.terminal_id) return;
+
+        setCustomerDisplayCart(
+            session.terminal_id,
+            cart.map(item => ({
+                productId: item.productId,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity
+            })),
+            cartSubtotal,
+            cartTax,
+            cartTotal
+        );
+    }, [cart, cartSubtotal, cartTax, cartTotal, session?.terminal_id]);
     // Load terminal settings when session changes
     useEffect(() => {
         const loadSettings = async () => {
@@ -109,6 +131,12 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
                 setActiveOrderId(createResult.order.id);
                 setPaymentAmount(createResult.order.total_amount);
                 setShowPayment(true);
+
+                // Update customer display to payment mode
+                if (session?.terminal_id) {
+                    setCustomerDisplayPayment(session.terminal_id, '', createResult.order.total_amount);
+                }
+
                 clearCart(); // Clear cart as order is created
             }
             // Scene 2: Cart empty -> Pay for existing active order
@@ -130,6 +158,11 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
                 setActiveOrderId(activeOrderResult.order.id);
                 setPaymentAmount(activeOrderResult.order.total_amount);
                 setShowPayment(true);
+
+                // Update customer display to payment mode
+                if (session?.terminal_id) {
+                    setCustomerDisplayPayment(session.terminal_id, '', activeOrderResult.order.total_amount);
+                }
             }
         } catch (error) {
             console.error('Payment initiation error:', error);
@@ -157,6 +190,11 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
                 const receipt = await generateReceiptBackendApi(activeOrderId);
                 if (receipt) {
                     setReceiptData(receipt);
+
+                    // Update customer display to thank you state
+                    if (session?.terminal_id) {
+                        setCustomerDisplayThankYou(session.terminal_id);
+                    }
                 } else {
                     alert('Payment successful, but failed to load receipt.');
                     setShowPayment(false);
