@@ -29,6 +29,7 @@ export interface Terminal {
     lastSession?: {
         openedAt: string;
         closedAt?: string;
+        totalSales: number;
     };
 }
 
@@ -224,6 +225,7 @@ interface BackendTerminal {
     posSessions?: {
         openedAt: string;
         closedAt?: string;
+        totalSales: number | string;
     }[];
 }
 
@@ -236,7 +238,10 @@ const mapBackendTerminal = (t: BackendTerminal): Terminal => ({
     terminalName: t.terminalName,
     userId: t.userId,
     createdAt: t.createdAt,
-    lastSession: t.posSessions?.[0],
+    lastSession: t.posSessions?.[0] ? {
+        ...t.posSessions[0],
+        totalSales: Number(t.posSessions[0].totalSales || 0)
+    } : undefined,
 });
 
 /**

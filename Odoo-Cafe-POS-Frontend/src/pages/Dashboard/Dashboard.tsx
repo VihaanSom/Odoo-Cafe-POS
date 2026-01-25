@@ -43,7 +43,7 @@ const mapTerminalToPOS = (t: Terminal): POSTerminal => ({
     id: t.id,
     name: t.terminalName,
     lastOpen: t.lastSession?.openedAt || t.createdAt,
-    lastSell: undefined,
+    lastSell: t.lastSession?.totalSales,
     paymentMethods: {
         cash: true,
         digital: true,
