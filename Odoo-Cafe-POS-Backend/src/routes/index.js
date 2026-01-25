@@ -17,6 +17,7 @@ const terminalRoutes = require('./terminal.routes');
 const orderRoutes = require('./order.routes');
 const paymentRoutes = require('./payment.routes');
 const paymentSettingsRoutes = require('./payment-settings.routes');
+const customerRoutes = require('./customer.routes');
 
 const router = express.Router();
 
@@ -32,6 +33,7 @@ router.use('/tables', tableRoutes);
 router.use('/kitchen', kitchenRoutes);
 router.use('/reports', reportRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/customers', customerRoutes);
 
 // Dev B: Orders & Payments
 router.use('/sessions', sessionRoutes);

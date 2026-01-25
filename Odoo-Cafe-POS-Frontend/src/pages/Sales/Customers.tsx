@@ -2,32 +2,17 @@
  * Customers Management Page
  * CRUD operations for customer records
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Edit2, Trash2, X, Users } from 'lucide-react';
 import AdminPageLayout from '../../components/admin/AdminPageLayout';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-
-interface Customer {
-    id: string;
-    name: string;
-    phone: string;
-    email: string;
-    totalSales: number;
-    createdAt: string;
-}
-
-// Mock data
-const mockCustomers: Customer[] = [
-    { id: 'cust-1', name: 'Rahul Sharma', phone: '+91 98765 43210', email: 'rahul@email.com', totalSales: 4520, createdAt: '2026-01-15' },
-    { id: 'cust-2', name: 'Priya Patel', phone: '+91 87654 32109', email: 'priya.p@email.com', totalSales: 8960, createdAt: '2026-01-10' },
-    { id: 'cust-3', name: 'Amit Kumar', phone: '+91 76543 21098', email: 'amit.k@email.com', totalSales: 1250, createdAt: '2026-01-20' },
-    { id: 'cust-4', name: 'Sneha Reddy', phone: '+91 65432 10987', email: 'sneha.r@email.com', totalSales: 15800, createdAt: '2025-12-05' },
-    { id: 'cust-5', name: 'Vikram Singh', phone: '+91 54321 09876', email: 'vikram.s@email.com', totalSales: 350, createdAt: '2026-01-22' },
-];
+import { getCustomersApi, createCustomerApi, updateCustomerApi, deleteCustomerApi } from '../../api/customers.api';
+import type { Customer } from '../../api/customers.api';
 
 const Customers = () => {
-    const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -36,6 +21,23 @@ const Customers = () => {
     // Confirm dialog state
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
+
+    // Fetch customers on mount
+    useEffect(() => {
+        fetchCustomers();
+    }, []);
+
+    const fetchCustomers = async () => {
+        setIsLoading(true);
+        try {
+            const data = await getCustomersApi();
+            setCustomers(data);
+        } catch (error) {
+            console.error('Error fetching customers:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const filteredCustomers = customers.filter(customer =>
         customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -64,35 +66,37 @@ const Customers = () => {
         setConfirmOpen(true);
     };
 
-    const handleDeleteConfirm = () => {
+    const handleDeleteConfirm = async () => {
         if (deleteId) {
-            setCustomers(customers.filter(c => c.id !== deleteId));
-            setDeleteId(null);
+            try {
+                const success = await deleteCustomerApi(deleteId);
+                if (success) {
+                    setCustomers(customers.filter(c => c.id !== deleteId));
+                }
+            } catch (error) {
+                console.error('Error deleting customer:', error);
+            } finally {
+                setDeleteId(null);
+                setConfirmOpen(false);
+            }
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (editingCustomer) {
-            setCustomers(customers.map(c =>
-                c.id === editingCustomer.id
-                    ? { ...c, name: formData.name, phone: formData.phone, email: formData.email }
-                    : c
-            ));
-        } else {
-            const newCustomer: Customer = {
-                id: `cust-${Date.now()}`,
-                name: formData.name,
-                phone: formData.phone,
-                email: formData.email,
-                totalSales: 0,
-                createdAt: new Date().toISOString().split('T')[0],
-            };
-            setCustomers([...customers, newCustomer]);
+        try {
+            if (editingCustomer) {
+                const updated = await updateCustomerApi(editingCustomer.id, formData);
+                setCustomers(customers.map(c => c.id === editingCustomer.id ? updated : c));
+            } else {
+                const created = await createCustomerApi(formData);
+                setCustomers([...customers, created]);
+            }
+            setIsModalOpen(false);
+        } catch (error: any) {
+            alert(error.message || 'Failed to save customer');
         }
-
-        setIsModalOpen(false);
     };
 
     return (
@@ -115,7 +119,15 @@ const Customers = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredCustomers.length === 0 ? (
+                        {isLoading ? (
+                            <tr>
+                                <td colSpan={5}>
+                                    <div className="admin-empty">
+                                        <p className="admin-empty__text">Loading customers...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : filteredCustomers.length === 0 ? (
                             <tr>
                                 <td colSpan={5}>
                                     <div className="admin-empty">
