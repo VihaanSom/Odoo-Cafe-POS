@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, CreditCard, ClipboardList } from 'lucide-react';
 import { useOrder } from '../../store/order.store';
@@ -10,6 +10,11 @@ import {
     type CreateOrderBackendRequest
 } from '../../api/orders.api';
 import { processPaymentBackendApi, generateReceiptBackendApi, type PaymentMethod } from '../../api/payments.api';
+import {
+    setCustomerDisplayCart,
+    setCustomerDisplayPayment,
+    setCustomerDisplayThankYou
+} from '../../pages/CustomerDisplay/CustomerDisplay';
 
 interface OrderSummaryProps {
     tableNumber: string;
@@ -42,6 +47,24 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
         if (isNaN(numPrice)) return '₹0.00';
         return `₹${numPrice.toFixed(2)}`;
     };
+
+    // Sync cart changes to customer display
+    useEffect(() => {
+        if (!session?.terminal_id) return;
+
+        setCustomerDisplayCart(
+            session.terminal_id,
+            cart.map(item => ({
+                productId: item.productId,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity
+            })),
+            cartSubtotal,
+            cartTax,
+            cartTotal
+        );
+    }, [cart, cartSubtotal, cartTax, cartTotal, session?.terminal_id]);
 
     const initiatePayment = async () => {
         if (!session) {
@@ -88,6 +111,12 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
                 setActiveOrderId(createResult.order.id);
                 setPaymentAmount(createResult.order.total_amount);
                 setShowPayment(true);
+
+                // Update customer display to payment mode
+                if (session?.terminal_id) {
+                    setCustomerDisplayPayment(session.terminal_id, '', createResult.order.total_amount);
+                }
+
                 clearCart(); // Clear cart as order is created
             }
             // Scene 2: Cart empty -> Pay for existing active order
@@ -109,6 +138,11 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
                 setActiveOrderId(activeOrderResult.order.id);
                 setPaymentAmount(activeOrderResult.order.total_amount);
                 setShowPayment(true);
+
+                // Update customer display to payment mode
+                if (session?.terminal_id) {
+                    setCustomerDisplayPayment(session.terminal_id, '', activeOrderResult.order.total_amount);
+                }
             }
         } catch (error) {
             console.error('Payment initiation error:', error);
@@ -135,6 +169,11 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
                 const receipt = await generateReceiptBackendApi(activeOrderId);
                 if (receipt) {
                     setReceiptData(receipt);
+
+                    // Update customer display to thank you state
+                    if (session?.terminal_id) {
+                        setCustomerDisplayThankYou(session.terminal_id);
+                    }
                 } else {
                     alert('Payment successful, but failed to load receipt.');
                     setShowPayment(false);

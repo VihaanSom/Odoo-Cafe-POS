@@ -9,6 +9,7 @@ import TableView from './pages/POS/TableView';
 import OrderView from './pages/POS/OrderView';
 import TerminalSettings from './pages/POS/TerminalSettings';
 import KitchenDisplay from './pages/Kitchen/KitchenDisplay';
+import CustomerDisplay from './pages/CustomerDisplay/CustomerDisplay';
 // Admin Pages
 import Products from './pages/Inventory/Products';
 import ProductList from './pages/Inventory/ProductList';
@@ -19,8 +20,10 @@ import Customers from './pages/Sales/Customers';
 import Payments from './pages/Sales/Payments';
 import FloorEditor from './pages/Floors/FloorEditor';
 import Settings from './pages/Settings/Settings';
+import AnalyticsDashboard from './pages/Analytics/AnalyticsDashboard';
 
 import './styles/globals.css';
+
 
 function App() {
   return (
@@ -46,6 +49,7 @@ function App() {
               <Route path="/dashboard/customers" element={<Customers />} />
               <Route path="/dashboard/payments" element={<Payments />} />
               <Route path="/dashboard/floors" element={<FloorEditor />} />
+              <Route path="/dashboard/analytics" element={<AnalyticsDashboard />} />
               <Route path="/dashboard/settings" element={<Settings />} />
 
               {/* POS Routes */}
@@ -56,6 +60,9 @@ function App() {
 
               {/* Kitchen Display */}
               <Route path="/kitchen" element={<KitchenDisplay />} />
+
+              {/* Customer Display */}
+              <Route path="/customer-display/:terminalId" element={<CustomerDisplay />} />
 
               {/* Default redirect to login */}
               <Route path="/" element={<Navigate to="/login" replace />} />

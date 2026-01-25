@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../../store/auth.store';
 import { useSession } from '../../store/session.store';
 import { getTerminalsApi, type Terminal } from '../../api/branches.api';
+import { setCustomerDisplaySession } from '../CustomerDisplay/CustomerDisplay';
 import StatCard from '../../components/common/StatCard';
 import './Dashboard.css';
 
@@ -110,15 +111,19 @@ const Dashboard = () => {
         const success = await startSession(terminalId);
         setStartingTerminalId(null);
         if (success) {
+            // Update customer display to IDLE state
+            setCustomerDisplaySession(terminalId, true, 'Odoo Cafe');
             navigate('/pos/tables');
         }
     };
 
     const handleStopSession = async () => {
         clearError();
+        const terminalId = session?.terminal_id;
         const success = await endSession(session?.total_sales || 0);
-        if (success) {
-            // Session closed, stay on dashboard
+        if (success && terminalId) {
+            // Update customer display to NO_SESSION state
+            setCustomerDisplaySession(terminalId, false);
         }
     };
 
@@ -293,9 +298,11 @@ const Dashboard = () => {
                                                 Kitchen Display
                                             </button>
                                             <button
-                                                className="terminal-card__dropdown-item terminal-card__dropdown-item--disabled"
-                                                disabled
-                                                title="Coming Soon"
+                                                className="terminal-card__dropdown-item"
+                                                onClick={() => {
+                                                    setOpenMenuId(null);
+                                                    window.open(`/customer-display/${terminal.id}`, `customer-display-${terminal.id}`, 'width=1024,height=768');
+                                                }}
                                             >
                                                 <Monitor size={16} />
                                                 Customer Display

@@ -1,0 +1,419 @@
+/* ============================================
+   Customer Display Page Styles
+   Modern design matching app's blue theme
+   ============================================ */
+
+.customer-display {
+    display: flex;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    color: #fff;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    overflow: hidden;
+}
+
+/* Left Panel - Fixed */
+.customer-display__left {
+    width: 35%;
+    min-width: 280px;
+    max-width: 400px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3rem 2rem;
+    border-right: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.customer-display__logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.customer-display__logo-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #007BFF 0%, #00c6ff 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 8px 24px rgba(0, 123, 255, 0.35);
+}
+
+.customer-display__logo span {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    letter-spacing: 0.5px;
+}
+
+.customer-display__welcome {
+    text-align: center;
+}
+
+.customer-display__welcome p {
+    font-size: 1.1rem;
+    color: rgba(148, 163, 184, 0.9);
+    margin: 0 0 0.5rem;
+}
+
+.customer-display__welcome h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+    background: linear-gradient(90deg, #fff 0%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.customer-display__footer {
+    font-size: 0.85rem;
+    color: rgba(148, 163, 184, 0.6);
+}
+
+.customer-display__footer span {
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+/* Right Panel - Dynamic */
+.customer-display__right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+}
+
+/* Message State (NO_SESSION, IDLE) */
+.customer-display__message {
+    text-align: center;
+    animation: fadeIn 0.5s ease;
+}
+
+.customer-display__message-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+}
+
+.customer-display__message h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem;
+    color: #fff;
+}
+
+.customer-display__message p {
+    font-size: 1.1rem;
+    color: rgba(148, 163, 184, 0.8);
+    margin: 0;
+}
+
+/* Cart State */
+.customer-display__cart {
+    width: 100%;
+    max-width: 500px;
+    animation: slideUp 0.4s ease;
+}
+
+.customer-display__cart-items {
+    max-height: 50vh;
+    overflow-y: auto;
+    margin-bottom: 2rem;
+}
+
+.customer-display__cart-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+    font-size: 1.1rem;
+}
+
+.customer-display__item-qty {
+    color: rgba(148, 163, 184, 0.8);
+    min-width: 50px;
+}
+
+.customer-display__item-name {
+    flex: 1;
+    color: #fff;
+    font-weight: 500;
+}
+
+.customer-display__item-price {
+    color: #fff;
+    font-weight: 600;
+    min-width: 80px;
+    text-align: right;
+}
+
+.customer-display__cart-summary {
+    background: rgba(59, 130, 246, 0.05);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+.customer-display__summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    font-size: 1rem;
+    color: rgba(148, 163, 184, 0.9);
+}
+
+.customer-display__summary-row--total {
+    border-top: 1px solid rgba(59, 130, 246, 0.3);
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+/* Payment State */
+.customer-display__payment {
+    text-align: center;
+    animation: fadeIn 0.5s ease;
+}
+
+.customer-display__payment-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0 0 2rem;
+    color: #fff;
+}
+
+.customer-display__qr-container {
+    margin-bottom: 2rem;
+}
+
+.customer-display__qr-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: inline-block;
+    position: relative;
+}
+
+.customer-display__qr-label {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #007BFF 0%, #00c6ff 100%);
+    color: #fff;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.customer-display__qr-placeholder {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    border-radius: 8px;
+    color: #333;
+}
+
+.customer-display__qr-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.customer-display__qr-placeholder span {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.customer-display__payment-amount {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #3b82f6;
+}
+
+/* Thank You State */
+.customer-display__thankyou {
+    text-align: center;
+    animation: scaleIn 0.5s ease;
+}
+
+.customer-display__thankyou h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    color: #fff;
+}
+
+.customer-display__thankyou h2 {
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: rgba(148, 163, 184, 0.8);
+    margin: 0 0 2rem;
+}
+
+.customer-display__thankyou-tag {
+    display: inline-block;
+    background: linear-gradient(135deg, #007BFF 0%, #00c6ff 100%);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.35);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Scrollbar styling */
+.customer-display__cart-items::-webkit-scrollbar {
+    width: 6px;
+}
+
+.customer-display__cart-items::-webkit-scrollbar-track {
+    background: rgba(59, 130, 246, 0.05);
+    border-radius: 3px;
+}
+
+.customer-display__cart-items::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.3);
+    border-radius: 3px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .customer-display {
+        flex-direction: column;
+    }
+
+    .customer-display__left {
+        width: 100%;
+        max-width: none;
+        min-height: auto;
+        padding: 1.5rem;
+        flex-direction: row;
+        justify-content: space-between;
+        border-right: none;
+        border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .customer-display__logo {
+        flex-direction: row;
+    }
+
+    .customer-display__logo-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+    }
+
+    .customer-display__logo-icon svg {
+        font-size: 28px !important;
+    }
+
+    .customer-display__welcome {
+        text-align: right;
+    }
+
+    .customer-display__welcome p {
+        font-size: 0.9rem;
+    }
+
+    .customer-display__welcome h2 {
+        font-size: 1.1rem;
+    }
+
+    .customer-display__footer {
+        display: none;
+    }
+
+    .customer-display__right {
+        flex: 1;
+        min-height: 60vh;
+    }
+
+    .customer-display__message h2 {
+        font-size: 1.5rem;
+    }
+
+    .customer-display__thankyou h1 {
+        font-size: 1.75rem;
+    }
+
+    .customer-display__thankyou h2 {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .customer-display__left {
+        padding: 1rem;
+    }
+
+    .customer-display__logo-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .customer-display__right {
+        padding: 1rem;
+    }
+
+    .customer-display__cart-item {
+        font-size: 0.95rem;
+    }
+
+    .customer-display__qr-placeholder {
+        width: 160px;
+        height: 160px;
+    }
+}
