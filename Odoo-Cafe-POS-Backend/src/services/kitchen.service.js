@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
-const { ORDER_STATUS, MESSAGES } = require('../utils/constants');
+const { ORDER_STATUS, MESSAGES, TABLE_STATUS } = require('../utils/constants');
+const socketUtil = require('../utils/socket');
 
 /**
  * Get all active orders for Kitchen Display System
@@ -9,11 +10,11 @@ const getActiveOrders = async (branchId) => {
     const where = {
         status: { in: [ORDER_STATUS.CREATED, ORDER_STATUS.IN_PROGRESS] }
     };
-    
+
     if (branchId) {
         where.branchId = branchId;
     }
-    
+
     return prisma.order.findMany({
         where,
         include: {
@@ -41,7 +42,7 @@ const getActiveOrders = async (branchId) => {
 const getOrdersByStatus = async (status, branchId) => {
     const where = { status };
     if (branchId) where.branchId = branchId;
-    
+
     return prisma.order.findMany({
         where,
         include: {
@@ -63,6 +64,7 @@ const getReadyOrders = async (branchId) => {
 
 /**
  * Update order status with validation
+ * Automatically frees the table when order is COMPLETED
  */
 const updateOrderStatus = async (orderId, newStatus) => {
     // Define valid status transitions
@@ -71,18 +73,19 @@ const updateOrderStatus = async (orderId, newStatus) => {
         [ORDER_STATUS.IN_PROGRESS]: [ORDER_STATUS.READY],
         [ORDER_STATUS.READY]: [ORDER_STATUS.COMPLETED]
     };
-    
-    // Fetch current order
+
+    // Fetch current order with table info
     const order = await prisma.order.findUnique({
-        where: { id: orderId }
+        where: { id: orderId },
+        include: { table: true }
     });
-    
+
     if (!order) {
         const error = new Error(MESSAGES.ORDER_NOT_FOUND);
         error.statusCode = 404;
         throw error;
     }
-    
+
     // Check if transition is valid
     const allowedTransitions = validTransitions[order.status] || [];
     if (!allowedTransitions.includes(newStatus)) {
@@ -90,8 +93,40 @@ const updateOrderStatus = async (orderId, newStatus) => {
         error.statusCode = 400;
         throw error;
     }
-    
-    // Update the order
+
+    // If transitioning to READY and order has a table, free the table
+    if (newStatus === ORDER_STATUS.READY && order.tableId) {
+        // Use transaction to update both order and table
+        const [updatedOrder, updatedTable] = await prisma.$transaction([
+            prisma.order.update({
+                where: { id: orderId },
+                data: { status: newStatus },
+                include: {
+                    orderItems: {
+                        include: { product: true }
+                    },
+                    table: true
+                }
+            }),
+            prisma.table.update({
+                where: { id: order.tableId },
+                data: { status: TABLE_STATUS.FREE },
+                include: { floor: true }
+            })
+        ]);
+
+        // Emit socket event for real-time table update
+        try {
+            const io = socketUtil.getIO();
+            io.emit('table:updated', updatedTable);
+        } catch (e) {
+            console.warn('Socket emit error for table update:', e.message);
+        }
+
+        return updatedOrder;
+    }
+
+    // Update the order only (no table change needed)
     return prisma.order.update({
         where: { id: orderId },
         data: { status: newStatus },

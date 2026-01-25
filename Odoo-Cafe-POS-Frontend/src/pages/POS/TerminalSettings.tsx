@@ -7,6 +7,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Plus, X } from 'lucide-react';
 import { getTerminalsApi, createTerminalApi, getBranches, type Terminal } from '../../api/branches.api';
+import { getTerminalPaymentSettingsApi, updateTerminalPaymentSettingsApi } from '../../api/payment-settings.api';
 import './TerminalSettings.css';
 
 interface PaymentMethods {
@@ -24,9 +25,6 @@ interface POSTerminal {
     paymentMethods: PaymentMethods;
 }
 
-// LocalStorage key for payment methods
-const PAYMENT_METHODS_KEY = 'pos_terminal_payment_methods';
-
 // Default payment methods
 const defaultPaymentMethods: PaymentMethods = {
     cash: true,
@@ -35,31 +33,7 @@ const defaultPaymentMethods: PaymentMethods = {
     upiId: '',
 };
 
-// Load payment methods from localStorage for a terminal
-const loadPaymentMethods = (terminalId: string): PaymentMethods => {
-    try {
-        const saved = localStorage.getItem(PAYMENT_METHODS_KEY);
-        if (saved) {
-            const allMethods = JSON.parse(saved);
-            return allMethods[terminalId] || { ...defaultPaymentMethods };
-        }
-    } catch {
-        // Ignore parse errors
-    }
-    return { ...defaultPaymentMethods };
-};
 
-// Save payment methods to localStorage for a terminal
-const savePaymentMethods = (terminalId: string, methods: PaymentMethods): void => {
-    try {
-        const saved = localStorage.getItem(PAYMENT_METHODS_KEY);
-        const allMethods = saved ? JSON.parse(saved) : {};
-        allMethods[terminalId] = methods;
-        localStorage.setItem(PAYMENT_METHODS_KEY, JSON.stringify(allMethods));
-    } catch {
-        console.error('Failed to save payment methods');
-    }
-};
 
 // Map backend Terminal to POSTerminal for display
 const mapTerminalToPOS = (t: Terminal): POSTerminal => ({
@@ -67,7 +41,7 @@ const mapTerminalToPOS = (t: Terminal): POSTerminal => ({
     name: t.terminalName,
     lastOpen: t.createdAt,
     lastSell: undefined,
-    paymentMethods: loadPaymentMethods(t.id),
+    paymentMethods: { ...defaultPaymentMethods }, // Initial, will be loaded from DB
 });
 
 const TerminalSettings = () => {
@@ -84,21 +58,39 @@ const TerminalSettings = () => {
 
     const selectedTerminal = terminals.find(t => t.id === selectedTerminalId) || terminals[0];
 
-    // Fetch terminals from backend on mount
+    // Fetch terminals and payment settings
     useEffect(() => {
         const loadTerminals = async () => {
             setIsLoading(true);
             try {
                 const backendTerminals = await getTerminalsApi();
                 const mappedTerminals = backendTerminals.map(mapTerminalToPOS);
-                setTerminals(mappedTerminals);
+
+                // Load payment settings for each terminal in parallel
+                const terminalsWithSettings = await Promise.all(mappedTerminals.map(async (t) => {
+                    const settings = await getTerminalPaymentSettingsApi(t.id);
+                    if (settings) {
+                        return {
+                            ...t,
+                            paymentMethods: {
+                                cash: settings.useCash,
+                                digital: settings.useDigital,
+                                upi: settings.useUpi,
+                                upiId: settings.upiId
+                            }
+                        };
+                    }
+                    return t;
+                }));
+
+                setTerminals(terminalsWithSettings);
 
                 // Set selected terminal from URL param or first available
                 const urlTerminalId = searchParams.get('terminal');
-                if (urlTerminalId && mappedTerminals.find(t => t.id === urlTerminalId)) {
+                if (urlTerminalId && terminalsWithSettings.find(t => t.id === urlTerminalId)) {
                     setSelectedTerminalId(urlTerminalId);
-                } else if (mappedTerminals.length > 0) {
-                    setSelectedTerminalId(mappedTerminals[0].id);
+                } else if (terminalsWithSettings.length > 0) {
+                    setSelectedTerminalId(terminalsWithSettings[0].id);
                 }
             } catch (err) {
                 console.error('Failed to load terminals:', err);
@@ -109,30 +101,56 @@ const TerminalSettings = () => {
         loadTerminals();
     }, [searchParams]);
 
-    const handlePaymentChange = (field: 'cash' | 'digital' | 'upi', value: boolean) => {
+    const handlePaymentChange = async (field: 'cash' | 'digital' | 'upi', value: boolean) => {
         if (!selectedTerminalId) return;
 
+        // Optimistic update
         setTerminals(prev => prev.map(t => {
             if (t.id === selectedTerminalId) {
-                const updatedMethods = { ...t.paymentMethods, [field]: value };
-                savePaymentMethods(t.id, updatedMethods);
-                return { ...t, paymentMethods: updatedMethods };
+                return { ...t, paymentMethods: { ...t.paymentMethods, [field]: value } };
             }
             return t;
         }));
+
+        try {
+            const currentTerminal = terminals.find(t => t.id === selectedTerminalId);
+            if (!currentTerminal) return;
+
+            const updatedMethods = { ...currentTerminal.paymentMethods, [field]: value };
+            await updateTerminalPaymentSettingsApi(selectedTerminalId, {
+                useCash: updatedMethods.cash,
+                useDigital: updatedMethods.digital,
+                useUpi: updatedMethods.upi,
+                upiId: updatedMethods.upiId
+            });
+        } catch (err) {
+            console.error('Failed to update terminal settings:', err);
+            setError('Failed to save settings');
+        }
     };
 
-    const handleUpiIdChange = (value: string) => {
+    const handleUpiIdChange = async (value: string) => {
         if (!selectedTerminalId) return;
 
+        // Optimistic update
         setTerminals(prev => prev.map(t => {
             if (t.id === selectedTerminalId) {
-                const updatedMethods = { ...t.paymentMethods, upiId: value };
-                savePaymentMethods(t.id, updatedMethods);
-                return { ...t, paymentMethods: updatedMethods };
+                return { ...t, paymentMethods: { ...t.paymentMethods, upiId: value } };
             }
             return t;
         }));
+
+        try {
+            const currentTerminal = terminals.find(t => t.id === selectedTerminalId);
+            if (!currentTerminal) return;
+
+            await updateTerminalPaymentSettingsApi(selectedTerminalId, {
+                upiId: value
+            });
+        } catch (err) {
+            console.error('Failed to update UPI ID:', err);
+            setError('Failed to save UPI ID');
+        }
     };
 
     const handleCreateTerminal = async () => {

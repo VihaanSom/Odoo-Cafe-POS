@@ -1,13 +1,17 @@
 /**
  * Floor Plan Editor
- * Simple table management with floor selection dropdown
+ * Backend-integrated floor and table management
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Trash2, Copy, Save, Edit2 } from 'lucide-react';
+import { Plus, X, Trash2, Copy, Save, Edit2, Building2 } from 'lucide-react';
 import AdminPageLayout from '../../components/admin/AdminPageLayout';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
+import { getFloors, createFloor, updateFloor, deleteFloor } from '../../api/floors.api';
 import './FloorEditor.css';
+
+// Hardcoded branch ID (single branch system)
+const BRANCH_ID = 'e162320d-d2ab-493e-bfb3-80a6375e3073';
 
 interface TableItem {
     id: string;
@@ -23,51 +27,17 @@ interface Floor {
     tables: TableItem[];
 }
 
-// Hardcoded floor options
-const FLOOR_OPTIONS = [
-    { value: 'main-dining', label: 'Main Dining' },
-    { value: 'terrace', label: 'Terrace' },
-];
-
-// Load from localStorage or use defaults
-const loadFloors = (): Floor[] => {
-    const saved = localStorage.getItem('floor_plan_data_v3');
-    if (saved) {
-        try {
-            return JSON.parse(saved);
-        } catch {
-            // Return defaults if parse fails
-        }
-    }
-    return [
-        {
-            id: 'main-dining',
-            name: 'Main Dining',
-            tables: [
-                { id: 'table-1', tableNumber: '101', seats: 4, isActive: true, resource: 'Table 1 (Seating 4)' },
-                { id: 'table-2', tableNumber: '102', seats: 6, isActive: true, resource: 'Table 2 (Seating 6)' },
-                { id: 'table-3', tableNumber: '103', seats: 2, isActive: false, resource: 'Table 3 (Seating 2)' },
-                { id: 'table-4', tableNumber: '104', seats: 8, isActive: true, resource: 'Table 4 (Seating 8)' },
-            ],
-        },
-        {
-            id: 'terrace',
-            name: 'Terrace',
-            tables: [
-                { id: 'table-5', tableNumber: '201', seats: 4, isActive: true, resource: 'Terrace 1 (Seating 4)' },
-                { id: 'table-6', tableNumber: '202', seats: 4, isActive: true, resource: 'Terrace 2 (Seating 4)' },
-            ],
-        },
-    ];
-};
-
 const FloorEditor = () => {
-    const [floors, setFloors] = useState<Floor[]>(loadFloors);
-    const [activeFloorId, setActiveFloorId] = useState<string>('main-dining');
+    const [floors, setFloors] = useState<Floor[]>([]);
+    const [activeFloorId, setActiveFloorId] = useState<string>('');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+    const [isFloorModalOpen, setIsFloorModalOpen] = useState(false);
     const [editingTable, setEditingTable] = useState<TableItem | null>(null);
+    const [editingFloor, setEditingFloor] = useState<Floor | null>(null);
     const [isSaved, setIsSaved] = useState(true);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const [tableFormData, setTableFormData] = useState({
         tableNumber: '',
@@ -75,10 +45,128 @@ const FloorEditor = () => {
         resource: '',
     });
 
+    const [floorFormData, setFloorFormData] = useState({
+        name: '',
+    });
+
     // Confirm dialog state
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [deleteFloorConfirmOpen, setDeleteFloorConfirmOpen] = useState(false);
+
+    // Load floors from backend on mount
+    useEffect(() => {
+        loadFloorsFromBackend();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const loadFloorsFromBackend = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const floorsData = await getFloors(BRANCH_ID);
+            setFloors(floorsData as Floor[]);
+            
+            // Set first floor as active if none selected
+            if (floorsData.length > 0 && !activeFloorId) {
+                setActiveFloorId(floorsData[0].id);
+            }
+        } catch (err) {
+            console.error('Failed to load floors:', err);
+            setError('Failed to load floors from server');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const activeFloor = floors.find(f => f.id === activeFloorId);
+
+    // Floor Management Handlers
+    const handleCreateFloor = async () => {
+        if (!floorFormData.name.trim()) return;
+        
+        setLoading(true);
+        setError(null);
+        try {
+            const result = await createFloor(BRANCH_ID, floorFormData.name);
+            if (result.success && result.floor) {
+                await loadFloorsFromBackend();
+                setIsFloorModalOpen(false);
+                setFloorFormData({ name: '' });
+                setActiveFloorId(result.floor.id);
+            } else {
+                setError(result.error || 'Failed to create floor');
+            }
+        } catch (err) {
+            console.error('Failed to create floor:', err);
+            setError('Failed to create floor');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateFloor = async () => {
+        if (!editingFloor || !floorFormData.name.trim()) return;
+        
+        setLoading(true);
+        setError(null);
+        try {
+            const result = await updateFloor(editingFloor.id, floorFormData.name);
+            if (result.success) {
+                await loadFloorsFromBackend();
+                setIsFloorModalOpen(false);
+                setEditingFloor(null);
+                setFloorFormData({ name: '' });
+            } else {
+                setError(result.error || 'Failed to update floor');
+            }
+        } catch (err) {
+            console.error('Failed to update floor:', err);
+            setError('Failed to update floor');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteFloor = async () => {
+        if (!activeFloor) return;
+        
+        setLoading(true);
+        setError(null);
+        try {
+            const result = await deleteFloor(activeFloor.id);
+            if (result.success) {
+                await loadFloorsFromBackend();
+                setDeleteFloorConfirmOpen(false);
+                // Auto-select first remaining floor
+                const remainingFloors = floors.filter(f => f.id !== activeFloor.id);
+                if (remainingFloors.length > 0) {
+                    setActiveFloorId(remainingFloors[0].id);
+                }
+            } else {
+                setError(result.error || 'Failed to delete floor');
+            }
+        } catch (err) {
+            console.error('Failed to delete floor:', err);
+            setError('Failed to delete floor');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const openEditFloorModal = () => {
+        if (!activeFloor) return;
+        setEditingFloor(activeFloor);
+        setFloorFormData({ name: activeFloor.name });
+        setError(null);
+        setIsFloorModalOpen(true);
+    };
+
+    const openCreateFloorModal = () => {
+        setEditingFloor(null);
+        setFloorFormData({ name: '' });
+        setError(null);
+        setIsFloorModalOpen(true);
+    };
 
     // Selection handlers
     const toggleSelect = (tableId: string) => {
@@ -129,7 +217,7 @@ const FloorEditor = () => {
                 ? { ...floor, tables: [...floor.tables, newTable] }
                 : floor
         ));
-        setIsModalOpen(false);
+        setIsTableModalOpen(false);
         setTableFormData({ tableNumber: '', seats: 4, resource: '' });
         setIsSaved(false);
     };
@@ -150,7 +238,7 @@ const FloorEditor = () => {
                 : floor
         ));
         setEditingTable(null);
-        setIsModalOpen(false);
+        setIsTableModalOpen(false);
         setTableFormData({ tableNumber: '', seats: 4, resource: '' });
         setIsSaved(false);
     };
@@ -162,7 +250,7 @@ const FloorEditor = () => {
             seats: table.seats,
             resource: table.resource,
         });
-        setIsModalOpen(true);
+        setIsTableModalOpen(true);
     };
 
     // Bulk actions
@@ -215,7 +303,7 @@ const FloorEditor = () => {
             showNewButton={false}
         >
             <div className="floor-editor-v2">
-                {/* Floor Selection */}
+                {/* Floor Header */}
                 <div className="floor-header">
                     <div className="floor-selector">
                         <label className="floor-selector__label">Select Floor</label>
@@ -226,12 +314,46 @@ const FloorEditor = () => {
                                 setActiveFloorId(e.target.value);
                                 setSelectedIds([]);
                             }}
+                            disabled={loading || floors.length === 0}
                         >
-                            {FLOOR_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
+                            {floors.length === 0 ? (
+                                <option value="">No floors available</option>
+                            ) : (
+                                floors.map(floor => (
+                                    <option key={floor.id} value={floor.id}>{floor.name}</option>
+                                ))
+                            )}
                         </select>
                     </div>
+
+                    {/* Floor Management Buttons */}
+                    <div className="floor-actions">
+                        <button
+                            className="floor-action-btn floor-action-btn--create"
+                            onClick={openCreateFloorModal}
+                            disabled={loading}
+                        >
+                            <Building2 size={16} />
+                            Add Floor
+                        </button>
+                        <button
+                            className="floor-action-btn floor-action-btn--edit"
+                            onClick={openEditFloorModal}
+                            disabled={loading || !activeFloor}
+                        >
+                            <Edit2 size={16} />
+                            Edit Floor
+                        </button>
+                        <button
+                            className="floor-action-btn floor-action-btn--delete"
+                            onClick={() => setDeleteFloorConfirmOpen(true)}
+                            disabled={loading || !activeFloor || floors.length <= 1}
+                        >
+                            <Trash2 size={16} />
+                            Delete Floor
+                        </button>
+                    </div>
+
                     <button
                         className={`floor-save-btn ${!isSaved ? 'floor-save-btn--unsaved' : ''}`}
                         onClick={saveToLocalStorage}
@@ -241,6 +363,19 @@ const FloorEditor = () => {
                         {isSaved ? 'Saved' : 'Save Changes'}
                     </button>
                 </div>
+
+                {/* Error Display */}
+                {error && (
+                    <div className="floor-error">
+                        <span>{error}</span>
+                        <X size={16} onClick={() => setError(null)} style={{ cursor: 'pointer' }} />
+                    </div>
+                )}
+
+                {/* Loading State */}
+                {loading && (
+                    <div className="floor-loading">Loading floors...</div>
+                )}
 
                 {/* Floor Form Card */}
                 {activeFloor && (
@@ -273,7 +408,7 @@ const FloorEditor = () => {
                                         onClick={() => {
                                             setEditingTable(null);
                                             setTableFormData({ tableNumber: '', seats: 4, resource: '' });
-                                            setIsModalOpen(true);
+                                            setIsTableModalOpen(true);
                                         }}
                                     >
                                         <Plus size={16} />
@@ -347,17 +482,29 @@ const FloorEditor = () => {
                         </div>
                     </div>
                 )}
+
+                {!loading && floors.length === 0 && (
+                    <div className="floor-empty-state">
+                        <Building2 size={48} />
+                        <h3>No Floors Found</h3>
+                        <p>Get started by creating your first floor</p>
+                        <button className="floor-action-btn floor-action-btn--create" onClick={openCreateFloorModal}>
+                            <Building2 size={16} />
+                            Create First Floor
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Add/Edit Table Modal */}
             <AnimatePresence>
-                {isModalOpen && (
+                {isTableModalOpen && (
                     <motion.div
                         className="admin-modal-overlay"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={() => setIsModalOpen(false)}
+                        onClick={() => setIsTableModalOpen(false)}
                     >
                         <motion.div
                             className="admin-modal"
@@ -370,7 +517,7 @@ const FloorEditor = () => {
                                 <h2 className="admin-modal__title">
                                     {editingTable ? 'Edit Table' : 'Add Table'}
                                 </h2>
-                                <button className="admin-modal__close" onClick={() => setIsModalOpen(false)}>
+                                <button className="admin-modal__close" onClick={() => setIsTableModalOpen(false)}>
                                     <X size={20} />
                                 </button>
                             </div>
@@ -415,12 +562,83 @@ const FloorEditor = () => {
                                     <button
                                         type="button"
                                         className="admin-btn admin-btn--secondary"
-                                        onClick={() => setIsModalOpen(false)}
+                                        onClick={() => setIsTableModalOpen(false)}
                                     >
                                         Cancel
                                     </button>
                                     <button type="submit" className="admin-btn admin-btn--primary">
                                         {editingTable ? 'Update' : 'Add Table'}
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Floor Management Modal */}
+            <AnimatePresence>
+                {isFloorModalOpen && (
+                    <motion.div
+                        className="admin-modal-overlay"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsFloorModalOpen(false)}
+                    >
+                        <motion.div
+                            className="admin-modal"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="admin-modal__header">
+                                <h2 className="admin-modal__title">
+                                    {editingFloor ? 'Edit Floor' : 'Create Floor'}
+                                </h2>
+                                <button className="admin-modal__close" onClick={() => setIsFloorModalOpen(false)}><X size={20} /></button>
+                            </div>
+
+                            <form onSubmit={(e) => { 
+                                e.preventDefault(); 
+                                editingFloor ? handleUpdateFloor() : handleCreateFloor(); 
+                            }}>
+                                <div className="admin-modal__body">
+                                    {error && (
+                                        <div className="form-error">
+                                            {error}
+                                        </div>
+                                    )}
+                                    <div className="admin-form__group">
+                                        <label className="admin-form__label">Floor Name</label>
+                                        <input
+                                            type="text"
+                                            className="admin-form__input"
+                                            value={floorFormData.name}
+                                            onChange={(e) => setFloorFormData({ name: e.target.value })}
+                                            placeholder="e.g., Main Dining, Terrace, Rooftop"
+                                            required
+                                            autoFocus
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="admin-modal__footer">
+                                    <button
+                                        type="button"
+                                        className="admin-btn admin-btn--secondary"
+                                        onClick={() => setIsFloorModalOpen(false)}
+                                        disabled={loading}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        type="submit" 
+                                        className="admin-btn admin-btn--primary"
+                                        disabled={loading || !floorFormData.name.trim()}
+                                    >
+                                        {loading ? 'Saving...' : (editingFloor ? 'Update Floor' : 'Create Floor')}
                                     </button>
                                 </div>
                             </form>
@@ -441,12 +659,15 @@ const FloorEditor = () => {
                     justify-content: space-between;
                     align-items: flex-end;
                     gap: 1rem;
+                    flex-wrap: wrap;
                 }
 
                 .floor-selector {
                     display: flex;
                     flex-direction: column;
                     gap: 0.5rem;
+                    flex: 1;
+                    min-width: 200px;
                 }
 
                 .floor-selector__label {
@@ -461,7 +682,6 @@ const FloorEditor = () => {
                     border-radius: 8px;
                     font-size: 0.95rem;
                     background: #FAFBFC;
-                    min-width: 200px;
                     cursor: pointer;
                 }
 
@@ -469,6 +689,62 @@ const FloorEditor = () => {
                     outline: none;
                     border-color: var(--primary-color);
                     background: white;
+                }
+
+                .floor-selector__dropdown:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+
+                .floor-actions {
+                    display: flex;
+                    gap: 0.5rem;
+                    flex-wrap: wrap;
+                }
+
+                .floor-action-btn {
+                    padding: 0.75rem 1rem;
+                    border-radius: 8px;
+                    border: none;
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    transition: all 0.2s;
+                }
+
+                .floor-action-btn:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+
+                .floor-action-btn--create {
+                    background: #009688;
+                    color: white;
+                }
+
+                .floor-action-btn--create:hover:not(:disabled) {
+                    background: #00796B;
+                }
+
+                .floor-action-btn--edit {
+                    background: #3B82F6;
+                    color: white;
+                }
+
+                .floor-action-btn--edit:hover:not(:disabled) {
+                    background: #2563EB;
+                }
+
+                .floor-action-btn--delete {
+                    background: #DC2626;
+                    color: white;
+                }
+
+                .floor-action-btn--delete:hover:not(:disabled) {
+                    background: #B91C1C;
                 }
 
                 .floor-save-btn {
@@ -492,6 +768,47 @@ const FloorEditor = () => {
 
                 .floor-save-btn:disabled {
                     cursor: not-allowed;
+                }
+
+                .floor-error {
+                    background: #FEE2E2;
+                    border: 1px solid #EF4444;
+                    color: #991B1B;
+                    padding: 1rem;
+                    border-radius: 8px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .floor-loading {
+                    text-align: center;
+                    padding: 2rem;
+                    color: var(--text-muted);
+                }
+
+                .floor-empty-state {
+                    text-align: center;
+                    padding: 4rem 2rem;
+                    background: white;
+                    border-radius: 12px;
+                    box-shadow: var(--shadow-card);
+                }
+
+                .floor-empty-state svg {
+                    color: var(--text-muted);
+                    margin-bottom: 1rem;
+                }
+
+                .floor-empty-state h3 {
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    margin-bottom: 0.5rem;
+                }
+
+                .floor-empty-state p {
+                    color: var(--text-muted);
+                    margin-bottom: 1.5rem;
                 }
 
                 .floor-form-card {
@@ -684,19 +1001,37 @@ const FloorEditor = () => {
                     color: var(--primary-color);
                 }
 
+                .form-error {
+                    background: #FEE2E2;
+                    border: 1px solid #EF4444;
+                    color: #991B1B;
+                    padding: 0.75rem;
+                    border-radius: 6px;
+                    margin-bottom: 1rem;
+                    font-size: 0.9rem;
+                }
+
                 @media (max-width: 768px) {
                     .floor-header {
                         flex-direction: column;
                         align-items: stretch;
                     }
 
-                    .floor-selector__dropdown {
+                    .floor-selector {
                         width: 100%;
+                    }
+
+                    .floor-actions {
+                        width: 100%;
+                    }
+
+                    .floor-action-btn {
+                        flex: 1;
                     }
                 }
             `}</style>
 
-            {/* Delete Confirmation Dialog */}
+            {/* Delete Table Confirmation Dialog */}
             <ConfirmDialog
                 isOpen={confirmOpen}
                 onClose={() => setConfirmOpen(false)}
@@ -705,6 +1040,18 @@ const FloorEditor = () => {
                 title="Delete Tables"
                 message={`Are you sure you want to delete ${selectedIds.length} table(s)? This action cannot be undone.`}
                 confirmLabel="Delete"
+                cancelLabel="Cancel"
+            />
+
+            {/* Delete Floor Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={deleteFloorConfirmOpen}
+                onClose={() => setDeleteFloorConfirmOpen(false)}
+                onConfirm={handleDeleteFloor}
+                type="delete"
+                title="Delete Floor"
+                message={`Are you sure you want to delete "${activeFloor?.name}"? This will remove all tables on this floor. This action cannot be undone.`}
+                confirmLabel="Delete Floor"
                 cancelLabel="Cancel"
             />
         </AdminPageLayout>

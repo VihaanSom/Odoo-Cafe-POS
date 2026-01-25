@@ -1,5 +1,18 @@
 const kitchenService = require('../services/kitchen.service');
 const { ORDER_STATUS } = require('../utils/constants');
+const socketUtil = require('../utils/socket');
+
+/**
+ * Emit kitchen order update to all connected clients
+ */
+const emitKitchenUpdate = (eventType, order) => {
+    try {
+        const io = socketUtil.getIO();
+        io.emit('kitchen:orderUpdate', { type: eventType, order });
+    } catch (error) {
+        console.warn('Socket not available for kitchen update:', error.message);
+    }
+};
 
 /**
  * Get active orders for Kitchen Display
@@ -36,19 +49,23 @@ const getReadyOrders = async (req, res, next) => {
 const updateOrderStatus = async (req, res, next) => {
     try {
         const { status } = req.body;
-        
+
         if (!status) {
             return res.status(400).json({ message: 'Status is required' });
         }
-        
+
         // Validate status value
         if (!Object.values(ORDER_STATUS).includes(status)) {
-            return res.status(400).json({ 
-                message: `Invalid status. Must be one of: ${Object.values(ORDER_STATUS).join(', ')}` 
+            return res.status(400).json({
+                message: `Invalid status. Must be one of: ${Object.values(ORDER_STATUS).join(', ')}`
             });
         }
-        
+
         const order = await kitchenService.updateOrderStatus(req.params.id, status);
+
+        // Emit socket event for real-time updates
+        emitKitchenUpdate('statusChange', order);
+
         res.json(order);
     } catch (error) {
         if (error.statusCode) {
@@ -68,6 +85,10 @@ const updateOrderStatus = async (req, res, next) => {
 const startOrder = async (req, res, next) => {
     try {
         const order = await kitchenService.startOrder(req.params.id);
+
+        // Emit socket event for real-time updates
+        emitKitchenUpdate('started', order);
+
         res.json(order);
     } catch (error) {
         if (error.statusCode) {
@@ -87,6 +108,10 @@ const startOrder = async (req, res, next) => {
 const markOrderReady = async (req, res, next) => {
     try {
         const order = await kitchenService.markOrderReady(req.params.id);
+
+        // Emit socket event for real-time updates
+        emitKitchenUpdate('ready', order);
+
         res.json(order);
     } catch (error) {
         if (error.statusCode) {

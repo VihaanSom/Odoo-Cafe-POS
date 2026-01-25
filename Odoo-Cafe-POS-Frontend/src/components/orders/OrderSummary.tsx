@@ -15,6 +15,8 @@ import {
     setCustomerDisplayPayment,
     setCustomerDisplayThankYou
 } from '../../pages/CustomerDisplay/CustomerDisplay';
+import { getTerminalPaymentSettingsApi, type PaymentSettings } from '../../api/payment-settings.api';
+import { QRCodeCanvas } from 'qrcode.react';
 
 interface OrderSummaryProps {
     tableNumber: string;
@@ -41,6 +43,8 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
     const [paymentAmount, setPaymentAmount] = useState(0);
     const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
     const [receiptData, setReceiptData] = useState<any>(null);
+    const [terminalSettings, setTerminalSettings] = useState<PaymentSettings | null>(null);
+    const [showQRCode, setShowQRCode] = useState(false);
 
     const formatPrice = (price: number | string | undefined | null) => {
         const numPrice = typeof price === 'string' ? parseFloat(price) : Number(price);
@@ -65,6 +69,22 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
             cartTotal
         );
     }, [cart, cartSubtotal, cartTax, cartTotal, session?.terminal_id]);
+    // Load terminal settings when session changes
+    useEffect(() => {
+        const loadSettings = async () => {
+            if (session?.terminal_id) {
+                const settings = await getTerminalPaymentSettingsApi(session.terminal_id);
+                setTerminalSettings(settings);
+            }
+        };
+        loadSettings();
+    }, [session?.terminal_id]);
+
+    const getUPIUri = () => {
+        if (!terminalSettings?.upiId) return '';
+        const name = encodeURIComponent('Odoo Cafe');
+        return `upi://pay?pa=${terminalSettings.upiId}&pn=${name}&am=${paymentAmount}&cu=INR`;
+    };
 
     const initiatePayment = async () => {
         if (!session) {
@@ -165,6 +185,7 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
             });
 
             if (result.success) {
+                setShowQRCode(false); // Hide QR if it was showing
                 // Fetch receipt
                 const receipt = await generateReceiptBackendApi(activeOrderId);
                 if (receipt) {
@@ -266,6 +287,7 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
 
                 {receiptData ? (
                     <div style={{ padding: '1rem', overflowY: 'auto', maxHeight: '80vh', textAlign: 'left', background: 'white', color: 'black', margin: '1rem', borderRadius: '4px' }}>
+                        {/* ... existing receipt rendering ... */}
                         <div style={{ textAlign: 'center', marginBottom: '1rem', borderBottom: '1px dashed #ccc', paddingBottom: '0.5rem' }}>
                             <h3 style={{ margin: 0 }}>Odoo Cafe</h3>
                             <p style={{ margin: 0, fontSize: '0.8rem' }}>{receiptData.date}</p>
@@ -299,33 +321,72 @@ const OrderSummary = ({ tableNumber, tableId, branchId = 'default-branch' }: Ord
                             </button>
                         </div>
                     </div>
+                ) : showQRCode ? (
+                    <div style={{ padding: '2rem', textAlign: 'center' }}>
+                        <h3 style={{ marginBottom: '1rem' }}>Scan to Pay</h3>
+                        <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', display: 'inline-block', marginBottom: '1rem' }}>
+                            <QRCodeCanvas value={getUPIUri()} size={200} />
+                        </div>
+                        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>
+                            UPI ID: {terminalSettings?.upiId}<br />
+                            Amount: {formatPrice(paymentAmount)}
+                        </p>
+                        <div style={{ display: 'grid', gap: '0.5rem' }}>
+                            <button
+                                className="order-summary__pay-btn"
+                                onClick={() => processPayment('UPI')}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? 'Verifying...' : 'Confirm Payment'}
+                            </button>
+                            <button
+                                className="order-summary__clear-btn"
+                                onClick={() => setShowQRCode(false)}
+                                disabled={isLoading}
+                            >
+                                Back
+                            </button>
+                        </div>
+                    </div>
                 ) : (
                     <div style={{ padding: '2rem', textAlign: 'center' }}>
                         <h3 style={{ fontSize: '2rem', marginBottom: '2rem' }}>{formatPrice(paymentAmount)}</h3>
                         <div style={{ display: 'grid', gap: '1rem' }}>
-                            <button
-                                className="order-summary__pay-btn"
-                                onClick={() => processPayment('CASH')}
-                                disabled={isLoading}
-                            >
-                                CASH
-                            </button>
-                            <button
-                                className="order-summary__pay-btn"
-                                onClick={() => processPayment('UPI')}
-                                style={{ background: '#10B981' }}
-                                disabled={isLoading}
-                            >
-                                UPI
-                            </button>
-                            <button
-                                className="order-summary__pay-btn"
-                                onClick={() => processPayment('CARD')}
-                                style={{ background: '#6366F1' }}
-                                disabled={isLoading}
-                            >
-                                CARD
-                            </button>
+                            {(!terminalSettings || terminalSettings.useCash) && (
+                                <button
+                                    className="order-summary__pay-btn"
+                                    onClick={() => processPayment('CASH')}
+                                    disabled={isLoading}
+                                >
+                                    CASH
+                                </button>
+                            )}
+                            {(!terminalSettings || terminalSettings.useUpi) && (
+                                <button
+                                    className="order-summary__pay-btn"
+                                    onClick={() => {
+                                        if (terminalSettings?.upiId) {
+                                            setShowQRCode(true);
+                                        } else {
+                                            alert('UPI ID not configured for this terminal.');
+                                        }
+                                    }}
+                                    style={{ background: '#10B981' }}
+                                    disabled={isLoading}
+                                >
+                                    UPI
+                                </button>
+                            )}
+                            {(!terminalSettings || terminalSettings.useDigital) && (
+                                <button
+                                    className="order-summary__pay-btn"
+                                    onClick={() => processPayment('CARD')}
+                                    style={{ background: '#6366F1' }}
+                                    disabled={isLoading}
+                                >
+                                    CARD
+                                </button>
+                            )}
                         </div>
                         {isLoading && <p>Processing...</p>}
                         {orderError && <p style={{ color: 'red', marginTop: '1rem' }}>{orderError}</p>}

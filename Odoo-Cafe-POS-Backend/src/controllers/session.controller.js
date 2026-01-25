@@ -12,7 +12,7 @@ const openSession = async (req, res, next) => {
             return res.status(400).json({ message: 'Terminal ID is required' });
         }
 
-        const session = await sessionService.openSession(terminalId);
+        const session = await sessionService.openSession(terminalId, req.user.id);
         res.status(201).json({ session });
     } catch (error) {
         next(error);
