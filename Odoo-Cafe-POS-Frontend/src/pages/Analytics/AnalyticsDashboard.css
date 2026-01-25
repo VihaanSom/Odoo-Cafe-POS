@@ -280,3 +280,145 @@
         overflow-x: auto;
     }
 }
+
+/* Print Header (Hidden by default) */
+.print-header {
+    display: none;
+}
+
+/* Print Styles for PDF Export */
+@media print {
+    @page {
+        size: A4;
+        margin: 1.5cm;
+    }
+
+    body {
+        background: white;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    /* Hide everything initially */
+    body * {
+        visibility: hidden;
+    }
+
+    /* Show Dashboard & Children */
+    .analytics-dashboard,
+    .analytics-dashboard * {
+        visibility: visible;
+    }
+
+    .analytics-dashboard {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 0;
+        margin: 0;
+        background: white;
+        overflow: visible;
+    }
+
+    /* Header Styling */
+    .print-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 2rem;
+        margin-bottom: 2rem;
+        border-bottom: 3px solid #007BFF;
+        break-inside: avoid;
+    }
+
+    .print-header__brand h1 {
+        font-size: 24px;
+        color: #000;
+        margin: 0;
+    }
+
+    .print-header__brand p {
+        color: #666;
+        margin: 5px 0 0;
+    }
+
+    .print-header__info {
+        text-align: right;
+        font-size: 14px;
+        color: #444;
+    }
+
+    /* Hide interactive elements */
+    .analytics-header__left button,
+    .analytics-filters,
+    .analytics-loading,
+    .analytics-back {
+        display: none !important;
+    }
+
+    /* Adjust main header for print */
+    .analytics-header {
+        margin-bottom: 1rem;
+        border: none;
+        padding-bottom: 0;
+    }
+
+    .analytics-title h1 {
+        display: none;
+    }
+
+    .analytics-title p {
+        display: none;
+    }
+
+    /* Layout Adjustments */
+    .analytics-summary {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        break-inside: avoid;
+    }
+
+    .analytics-charts {
+        display: block !important;
+        margin-bottom: 2rem;
+        break-inside: avoid;
+    }
+
+    .chart-container {
+        margin-bottom: 1rem;
+        box-shadow: none;
+        border: 1px solid #ddd;
+        page-break-inside: avoid;
+    }
+
+    .analytics-tables {
+        display: block !important;
+    }
+
+    .table-card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+        max-height: none;
+        margin-bottom: 2rem;
+        page-break-inside: avoid;
+    }
+
+    .analytics-card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+
+    /* Typography */
+    h1,
+    h2,
+    h3,
+    h4,
+    p,
+    span,
+    td,
+    th {
+        color: #000 !important;
+    }
+}

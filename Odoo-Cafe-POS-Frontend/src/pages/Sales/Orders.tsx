@@ -4,7 +4,9 @@
  */
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, X, Receipt, Printer, Archive, Trash2 } from 'lucide-react';
+import { Eye, X, Receipt, Archive, Trash2, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import AdminPageLayout from '../../components/admin/AdminPageLayout';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 
@@ -175,6 +177,35 @@ const Orders = () => {
 
     const hasSelection = selectedIds.length > 0;
 
+    const handleDownloadReceipt = async () => {
+        if (!selectedOrder) return;
+
+        try {
+            const receiptElement = document.getElementById('receipt-content');
+            if (!receiptElement) return;
+
+            const canvas = await html2canvas(receiptElement, {
+                scale: 2, // Higher scale for better quality
+                backgroundColor: '#ffffff'
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdfWidth = 80; // mm (Standard receipt width)
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+            const pdf = new jsPDF({
+                orientation: pdfHeight > pdfWidth ? 'p' : 'l',
+                unit: 'mm',
+                format: [pdfWidth, pdfHeight]
+            });
+
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`Receipt-${selectedOrder.orderNumber}.pdf`);
+        } catch (error) {
+            console.error('Failed to download receipt:', error);
+        }
+    };
+
     return (
         <AdminPageLayout
             title="Orders"
@@ -301,7 +332,7 @@ const Orders = () => {
                                 </button>
                             </div>
 
-                            <div className="admin-modal__body" style={{ fontFamily: 'monospace' }}>
+                            <div className="admin-modal__body" id="receipt-content" style={{ fontFamily: 'monospace', padding: '20px', backgroundColor: 'white' }}>
                                 <div style={{ textAlign: 'center', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px dashed #ddd' }}>
                                     <h3 style={{ margin: 0 }}>Odoo Cafe</h3>
                                     <p style={{ margin: '0.25rem 0', color: '#666', fontSize: '0.85rem' }}>123 Main St, City</p>
@@ -347,9 +378,9 @@ const Orders = () => {
                                 <button className="admin-btn admin-btn--secondary" onClick={() => setSelectedOrder(null)}>
                                     Close
                                 </button>
-                                <button className="admin-btn admin-btn--primary">
-                                    <Printer size={16} />
-                                    Print
+                                <button className="admin-btn admin-btn--primary" onClick={handleDownloadReceipt}>
+                                    <Download size={16} />
+                                    Download PDF
                                 </button>
                             </div>
                         </motion.div>

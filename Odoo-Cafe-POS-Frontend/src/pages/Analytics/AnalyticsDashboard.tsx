@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import { motion } from 'framer-motion';
 import {
     ArrowLeft,
@@ -196,8 +197,83 @@ const AnalyticsDashboard = () => {
             .sort((a, b) => b.value - a.value);
     }, [topProducts]);
 
+    const handleExportXLS = () => {
+        // Create workbook
+        const wb = XLSX.utils.book_new();
+
+        // 1. Summary Sheet
+        const summaryData = [
+            ["Metric", "Value"],
+            ["Total Sales", totalSales],
+            ["Total Orders", totalOrders],
+            ["Avg Order Value", avgOrderValue.toFixed(2)],
+            [],
+            ["Report Generated", new Date().toLocaleString()],
+            ["Period", period]
+        ];
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+        wsSummary['!cols'] = [{ wch: 20 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+        // 2. Sales Timeline Sheet (New)
+        const timelineHeader = period === 'Today' ? ["Hour", "Sales", "Orders"] : ["Date", "Sales", "Orders"];
+        const timelineData = [
+            timelineHeader,
+            ...salesData.map(d => [
+                d.fullDate || d.label || d.hour, // Best available label
+                d.sales,
+                d.orders
+            ])
+        ];
+        const wsTimeline = XLSX.utils.aoa_to_sheet(timelineData);
+        wsTimeline['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, wsTimeline, "Sales Timeline");
+
+        // 3. Products Sheet
+        const productData = [
+            ["Product", "Qty", "Price", "Revenue"],
+            ...topProducts.map(p => [
+                p.product.name,
+                p.totalQuantity,
+                p.product.price,
+                p.totalQuantity * Number(p.product.price)
+            ])
+        ];
+        const wsProducts = XLSX.utils.aoa_to_sheet(productData);
+        wsProducts['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, wsProducts, "Top Products");
+
+        // 4. Categories Sheet
+        const categoryData = [
+            ["Category", "Revenue"],
+            ...topCategories.map(c => [c.name, c.value])
+        ];
+        const wsCategories = XLSX.utils.aoa_to_sheet(categoryData);
+        wsCategories['!cols'] = [{ wch: 20 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, wsCategories, "Categories");
+
+        // Save file
+        XLSX.writeFile(wb, `analytics_report_${period}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    };
+
+    const handlePrint = () => {
+        window.print();
+    };
+
     return (
         <div className="analytics-dashboard">
+            {/* Print Only Header */}
+            <div className="print-header">
+                <div className="print-header__brand">
+                    <h1>Odoo Cafe POS</h1>
+                    <p>Analytics Report</p>
+                </div>
+                <div className="print-header__info">
+                    <p><strong>Period:</strong> {period} ({new Date().toLocaleDateString()})</p>
+                    <p><strong>Generated:</strong> {new Date().toLocaleString()}</p>
+                </div>
+            </div>
+
             {/* Header */}
             {/* Header */}
             <header className="analytics-header">
@@ -228,11 +304,11 @@ const AnalyticsDashboard = () => {
                 </div>
 
                 <div className="analytics-filters__actions">
-                    <button className="analytics-export-btn">
+                    <button className="analytics-export-btn" onClick={handlePrint}>
                         <FileText size={18} />
                         PDF
                     </button>
-                    <button className="analytics-export-btn">
+                    <button className="analytics-export-btn" onClick={handleExportXLS}>
                         <Download size={18} />
                         XLS
                     </button>
