@@ -11,7 +11,6 @@ import TerminalSettings from './pages/POS/TerminalSettings';
 import KitchenDisplay from './pages/Kitchen/KitchenDisplay';
 import CustomerDisplay from './pages/CustomerDisplay/CustomerDisplay';
 // Admin Pages
-import Products from './pages/Inventory/Products';
 import ProductList from './pages/Inventory/ProductList';
 import ProductForm from './pages/Inventory/ProductForm';
 import Categories from './pages/Inventory/Categories';
@@ -43,7 +42,6 @@ function App() {
               <Route path="/dashboard/products" element={<ProductList />} />
               <Route path="/dashboard/products/new" element={<ProductForm />} />
               <Route path="/dashboard/products/:productId" element={<ProductForm />} />
-              <Route path="/dashboard/products-old" element={<Products />} />
               <Route path="/dashboard/categories" element={<Categories />} />
               <Route path="/dashboard/orders" element={<Orders />} />
               <Route path="/dashboard/customers" element={<Customers />} />
