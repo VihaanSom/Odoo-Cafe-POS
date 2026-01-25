@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, X, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Plus, X } from 'lucide-react';
 import { getTerminalsApi, createTerminalApi, getBranches, type Terminal } from '../../api/branches.api';
 import './TerminalSettings.css';
 
@@ -200,9 +200,6 @@ const TerminalSettings = () => {
                             <span>Last Sell: ₹{selectedTerminal?.lastSell?.toLocaleString() || 0}</span>
                         </div>
                     </div>
-                    <button className="terminal-settings__menu-btn">
-                        <MoreVertical size={20} />
-                    </button>
                 </header>
 
                 {/* Error Message */}
