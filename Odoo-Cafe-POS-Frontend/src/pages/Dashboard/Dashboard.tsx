@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     MonitorSmartphone,
     Play,
@@ -12,6 +12,9 @@ import {
     LayoutGrid,
     Settings,
     AlertCircle,
+    MoreVertical,
+    ChefHat,
+    Monitor,
 } from 'lucide-react';
 import { useAuth } from '../../store/auth.store';
 import { useSession } from '../../store/session.store';
@@ -19,37 +22,88 @@ import { getTerminalsApi, type Terminal } from '../../api/branches.api';
 import StatCard from '../../components/common/StatCard';
 import './Dashboard.css';
 
+// POSTerminal interface matching TerminalSettings
+interface POSTerminal {
+    id: string;
+    name: string;
+    lastOpen?: string;
+    lastSell?: number;
+    paymentMethods: {
+        cash: boolean;
+        digital: boolean;
+        upi: boolean;
+        upiId?: string;
+    };
+}
+
+// Load terminals from localStorage
+const loadTerminals = (): POSTerminal[] => {
+    const saved = localStorage.getItem('pos_terminals_v1');
+    if (saved) {
+        try {
+            return JSON.parse(saved);
+        } catch {
+            // Return defaults
+        }
+    }
+    return [
+        {
+            id: 'terminal-001-main',
+            name: 'Main Terminal',
+            lastOpen: '2026-01-01',
+            lastSell: 5000,
+            paymentMethods: {
+                cash: true,
+                digital: true,
+                upi: false,
+                upiId: '',
+            },
+        },
+    ];
+};
+
 const Dashboard = () => {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const { session, isSessionActive, isLoading, error, startSession, endSession, clearError } = useSession();
 
-    // Terminal state
-    const [terminals, setTerminals] = useState<Terminal[]>([]);
-    const [selectedTerminalId, setSelectedTerminalId] = useState<string>('');
-    const [isLoadingTerminals, setIsLoadingTerminals] = useState(true);
+    // Terminals state
+    const [terminals, setTerminals] = useState<POSTerminal[]>(loadTerminals);
 
-    // Load terminals on mount
+    // Dropdown menu state - stores the terminal ID of the open menu (or null)
+    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    // Track which terminal is currently starting a session
+    const [startingTerminalId, setStartingTerminalId] = useState<string | null>(null);
+
+    // Reload terminals when navigating back to dashboard
     useEffect(() => {
-        const loadTerminals = async () => {
-            setIsLoadingTerminals(true);
-            const terminalsData = await getTerminalsApi();
-            setTerminals(terminalsData);
-            // Auto-select first terminal if available
-            if (terminalsData.length > 0 && !selectedTerminalId) {
-                setSelectedTerminalId(terminalsData[0].id);
-            }
-            setIsLoadingTerminals(false);
-        };
-        loadTerminals();
+        setTerminals(loadTerminals());
     }, []);
 
-    const handleStartSession = async () => {
-        if (!selectedTerminalId) {
-            return;
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setOpenMenuId(null);
+            }
+        };
+
+        if (openMenuId) {
+            document.addEventListener('mousedown', handleClickOutside);
         }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [openMenuId]);
+
+    const handleStartSession = async (terminalId: string) => {
         clearError();
-        const success = await startSession(selectedTerminalId);
+        setStartingTerminalId(terminalId);
+        const success = await startSession(terminalId);
+        setStartingTerminalId(null);
         if (success) {
             navigate('/pos/tables');
         }
@@ -64,6 +118,10 @@ const Dashboard = () => {
     };
 
     const handleLogout = () => {
+        if (isSessionActive) {
+            // Can't logout with an active session
+            return;
+        }
         logout();
         navigate('/login');
     };
@@ -170,91 +228,123 @@ const Dashboard = () => {
                 </motion.div>
             </div>
 
-            {/* Terminal Card */}
-            <motion.div
-                className="terminal-card"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.4 }}
-            >
-                {/* Settings Icon - Top Right */}
-                <button
-                    className="terminal-card__settings-btn"
-                    onClick={() => navigate('/dashboard/settings')}
-                >
-                    <Settings size={18} />
-                </button>
-
-                <div className="terminal-card__header">
-                    <div className="terminal-card__info">
-                        <span className="terminal-card__name">
-                            <MonitorSmartphone
-                                size={20}
-                                style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle' }}
-                            />
-                            {isLoadingTerminals ? 'Loading terminals...' : (
-                                terminals.length > 0 ? (
-                                    <select
-                                        className="terminal-card__select"
-                                        value={selectedTerminalId}
-                                        onChange={(e) => setSelectedTerminalId(e.target.value)}
-                                        disabled={isSessionActive || isLoading}
+            {/* Terminal Cards */}
+            <div className="terminal-cards-grid">
+                {terminals.map((terminal, index) => (
+                    <motion.div
+                        key={terminal.id}
+                        className="terminal-card"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: 0.4 + index * 0.1 }}
+                    >
+                        {/* Menu Dropdown - Top Right */}
+                        <div className="terminal-card__menu-wrapper" ref={openMenuId === terminal.id ? menuRef : null}>
+                            <button
+                                className="terminal-card__settings-btn"
+                                onClick={() => setOpenMenuId(openMenuId === terminal.id ? null : terminal.id)}
+                            >
+                                <MoreVertical size={18} />
+                            </button>
+                            <AnimatePresence>
+                                {openMenuId === terminal.id && (
+                                    <motion.div
+                                        className="terminal-card__dropdown"
+                                        initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                        transition={{ duration: 0.15 }}
                                     >
-                                        {terminals.map((terminal) => (
-                                            <option key={terminal.id} value={terminal.id}>
-                                                {terminal.terminalName}
-                                            </option>
-                                        ))}
-                                    </select>
-                                ) : 'No terminals available'
+                                        <button
+                                            className="terminal-card__dropdown-item"
+                                            onClick={() => {
+                                                setOpenMenuId(null);
+                                                navigate(`/pos/settings?terminal=${terminal.id}`);
+                                            }}
+                                        >
+                                            <Settings size={16} />
+                                            Setting
+                                        </button>
+                                        <button
+                                            className="terminal-card__dropdown-item"
+                                            onClick={() => {
+                                                setOpenMenuId(null);
+                                                navigate('/kitchen');
+                                            }}
+                                        >
+                                            <ChefHat size={16} />
+                                            Kitchen Display
+                                        </button>
+                                        <button
+                                            className="terminal-card__dropdown-item terminal-card__dropdown-item--disabled"
+                                            disabled
+                                            title="Coming Soon"
+                                        >
+                                            <Monitor size={16} />
+                                            Customer Display
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
+                        <div className="terminal-card__header">
+                            <div className="terminal-card__info">
+                                <span className="terminal-card__name">
+                                    <MonitorSmartphone
+                                        size={20}
+                                        style={{ display: 'inline', marginRight: '0.5rem', verticalAlign: 'middle' }}
+                                    />
+                                    {terminal.name}
+                                    <span
+                                        className={`terminal-card__status-dot ${isSessionActive && session?.terminal_id === terminal.id ? 'terminal-card__status-dot--active' : ''}`}
+                                        title={isSessionActive && session?.terminal_id === terminal.id ? 'Session Active' : 'No Active Session'}
+                                        style={{ marginLeft: '0.5rem', display: 'inline-block', verticalAlign: 'middle' }}
+                                    ></span>
+                                </span>
+                                <span className="terminal-card__id">ID: {terminal.id}</span>
+                            </div>
+                        </div>
+
+                        <div className="terminal-card__details">
+                            <div className="terminal-card__detail">
+                                <span className="terminal-card__detail-label">Last Open</span>
+                                <span className="terminal-card__detail-value">
+                                    {terminal.lastOpen ? formatDate(terminal.lastOpen) : '—'}
+                                </span>
+                            </div>
+                            <div className="terminal-card__detail">
+                                <span className="terminal-card__detail-label">Last Sell</span>
+                                <span className="terminal-card__detail-value">
+                                    {terminal.lastSell ? `₹${terminal.lastSell.toLocaleString()}` : '—'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="terminal-card__actions">
+                            {isSessionActive && session?.terminal_id === terminal.id ? (
+                                <button
+                                    className="terminal-card__btn terminal-card__btn--danger"
+                                    onClick={handleStopSession}
+                                    disabled={isLoading}
+                                >
+                                    <Square size={18} fill="currentColor" />
+                                    {isLoading ? 'Stopping...' : 'Stop Session'}
+                                </button>
+                            ) : (
+                                <button
+                                    className="terminal-card__btn terminal-card__btn--primary"
+                                    onClick={() => handleStartSession(terminal.id)}
+                                    disabled={isLoading || isSessionActive || startingTerminalId !== null}
+                                >
+                                    <Play size={20} />
+                                    {startingTerminalId === terminal.id ? 'Starting...' : 'New Session'}
+                                </button>
                             )}
-                            <span
-                                className={`terminal-card__status-dot ${isSessionActive ? 'terminal-card__status-dot--active' : ''}`}
-                                title={isSessionActive ? 'Session Active' : 'No Active Session'}
-                                style={{ marginLeft: '0.5rem', display: 'inline-block', verticalAlign: 'middle' }}
-                            ></span>
-                        </span>
-                        <span className="terminal-card__id">ID: {selectedTerminalId || '—'}</span>
-                    </div>
-                </div>
-
-                <div className="terminal-card__details">
-                    <div className="terminal-card__detail">
-                        <span className="terminal-card__detail-label">Session ID</span>
-                        <span className="terminal-card__detail-value">
-                            {session?.id || '—'}
-                        </span>
-                    </div>
-                    <div className="terminal-card__detail">
-                        <span className="terminal-card__detail-label">Opened At</span>
-                        <span className="terminal-card__detail-value">
-                            {session?.opened_at ? formatDate(session.opened_at) : '—'}
-                        </span>
-                    </div>
-                </div>
-
-                <div className="terminal-card__actions">
-                    {isSessionActive ? (
-                        <button
-                            className="terminal-card__btn terminal-card__btn--danger"
-                            onClick={handleStopSession}
-                            disabled={isLoading}
-                        >
-                            <Square size={18} fill="currentColor" />
-                            {isLoading ? 'Stopping...' : 'Stop Session'}
-                        </button>
-                    ) : (
-                        <button
-                            className="terminal-card__btn terminal-card__btn--primary"
-                            onClick={handleStartSession}
-                            disabled={isLoading}
-                        >
-                            <Play size={20} />
-                            {isLoading ? 'Starting...' : 'New Session'}
-                        </button>
-                    )}
-                </div>
-            </motion.div>
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
 
             {/* Quick Actions */}
             <h2 className="dashboard__section-title" style={{ marginTop: '2rem' }}>
@@ -295,15 +385,19 @@ const Dashboard = () => {
                 <motion.div
                     className="quick-action"
                     onClick={handleLogout}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={isSessionActive ? {} : { scale: 1.02 }}
+                    whileTap={isSessionActive ? {} : { scale: 0.98 }}
+                    style={{ opacity: isSessionActive ? 0.5 : 1, cursor: isSessionActive ? 'not-allowed' : 'pointer' }}
+                    title={isSessionActive ? 'Stop all sessions before logging out' : ''}
                 >
                     <div className="quick-action__icon" style={{ background: '#FEE2E2', color: '#DC2626' }}>
                         <LogOut size={24} />
                     </div>
                     <div className="quick-action__text">
                         <span className="quick-action__title">Logout</span>
-                        <span className="quick-action__subtitle">End your shift</span>
+                        {isSessionActive && (
+                            <span className="quick-action__subtitle" style={{ color: '#DC2626' }}>Stop session first</span>
+                        )}
                     </div>
                 </motion.div>
             </div>

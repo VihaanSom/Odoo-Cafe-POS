@@ -19,7 +19,6 @@ export interface Product {
     image?: string;
     icon?: string;
     description?: string;
-    barcode?: string;
     taxes: string;
     priceRules: PriceRule[];
     status: 'active' | 'archived';

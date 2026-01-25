@@ -7,7 +7,8 @@ import Signup from './pages/Auth/Signup';
 import Dashboard from './pages/Dashboard/Dashboard';
 import TableView from './pages/POS/TableView';
 import OrderView from './pages/POS/OrderView';
-
+import TerminalSettings from './pages/POS/TerminalSettings';
+import KitchenDisplay from './pages/Kitchen/KitchenDisplay';
 // Admin Pages
 import Products from './pages/Inventory/Products';
 import ProductList from './pages/Inventory/ProductList';

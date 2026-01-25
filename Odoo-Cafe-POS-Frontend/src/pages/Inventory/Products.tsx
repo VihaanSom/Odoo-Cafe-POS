@@ -271,16 +271,6 @@ const Products = () => {
                                             required
                                         />
                                     </div>
-
-                                    <div className="admin-form__group">
-                                        <label className="admin-form__label">Barcode (Optional)</label>
-                                        <input
-                                            type="text"
-                                            className="admin-form__input"
-                                            value={formData.barcode}
-                                            onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                                        />
-                                    </div>
                                 </div>
 
                                 <div className="admin-modal__footer">
@@ -312,7 +302,7 @@ const Products = () => {
                 confirmLabel="Delete"
                 cancelLabel="Cancel"
             />
-        </AdminPageLayout>
+        </AdminPageLayout >
     );
 };
 
