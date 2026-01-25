@@ -16,6 +16,7 @@ const sessionRoutes = require('./session.routes');
 const terminalRoutes = require('./terminal.routes');
 const orderRoutes = require('./order.routes');
 const paymentRoutes = require('./payment.routes');
+const paymentSettingsRoutes = require('./payment-settings.routes');
 
 const router = express.Router();
 
@@ -37,6 +38,7 @@ router.use('/sessions', sessionRoutes);
 router.use('/terminals', terminalRoutes);
 router.use('/orders', orderRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/payment-settings', paymentSettingsRoutes);
 
 module.exports = router;
 
