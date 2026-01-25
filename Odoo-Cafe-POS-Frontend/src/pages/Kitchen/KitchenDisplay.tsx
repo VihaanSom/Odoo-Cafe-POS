@@ -1,172 +1,20 @@
 /**
  * Kitchen Display Page
  * Shows order tickets for kitchen staff to manage
+ * Real-time updates via Socket.IO
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Search, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import {
+    getAllKitchenOrders,
+    advanceOrderStatus,
+    type KitchenOrder,
+    type KitchenOrderStatus,
+} from '../../api/kitchen.api';
+import { getSocket } from '../../utils/socket';
 import './KitchenDisplay.css';
-
-type OrderStatus = 'TO_COOK' | 'PREPARING' | 'COMPLETED';
-
-interface KitchenOrderItem {
-    id: string;
-    productName: string;
-    quantity: number;
-    isPrepared: boolean;
-    category: string;
-}
-
-interface KitchenOrder {
-    id: string;
-    orderNumber: string;
-    customerName: string;
-    items: KitchenOrderItem[];
-    status: OrderStatus;
-    createdAt: string;
-}
-
-// Mock kitchen orders
-const mockOrders: KitchenOrder[] = [
-    {
-        id: 'ko-1',
-        orderNumber: '#2205',
-        customerName: 'Amusing Octopus',
-        status: 'TO_COOK',
-        createdAt: new Date().toISOString(),
-        items: [
-            { id: 'i1', productName: 'Burger', quantity: 3, isPrepared: false, category: 'Quick Bites' },
-            { id: 'i2', productName: 'Pizza', quantity: 3, isPrepared: false, category: 'Quick Bites' },
-            { id: 'i3', productName: 'Coffee', quantity: 3, isPrepared: false, category: 'Drink' },
-            { id: 'i4', productName: 'Water', quantity: 3, isPrepared: false, category: 'Drink' },
-        ],
-    },
-    {
-        id: 'ko-2',
-        orderNumber: '#2206',
-        customerName: 'Jett main',
-        status: 'TO_COOK',
-        createdAt: new Date().toISOString(),
-        items: [
-            { id: 'i5', productName: 'Burger', quantity: 3, isPrepared: false, category: 'Quick Bites' },
-            { id: 'i6', productName: 'Pizza', quantity: 3, isPrepared: true, category: 'Quick Bites' },
-            { id: 'i7', productName: 'Water', quantity: 3, isPrepared: true, category: 'Drink' },
-        ],
-    },
-    {
-        id: 'ko-3',
-        orderNumber: '#2207',
-        customerName: 'Swift Eagle',
-        status: 'PREPARING',
-        createdAt: new Date().toISOString(),
-        items: [
-            { id: 'i8', productName: 'Burger', quantity: 3, isPrepared: true, category: 'Quick Bites' },
-            { id: 'i9', productName: 'Pizza', quantity: 3, isPrepared: false, category: 'Quick Bites' },
-            { id: 'i10', productName: 'Coffee', quantity: 3, isPrepared: true, category: 'Drink' },
-        ],
-    },
-    {
-        id: 'ko-4',
-        orderNumber: '#2208',
-        customerName: 'Calm River',
-        status: 'PREPARING',
-        createdAt: new Date().toISOString(),
-        items: [
-            { id: 'i11', productName: 'Burger', quantity: 3, isPrepared: false, category: 'Quick Bites' },
-            { id: 'i12', productName: 'Coffee', quantity: 3, isPrepared: false, category: 'Drink' },
-        ],
-    },
-    {
-        id: 'ko-5',
-        orderNumber: '#2209',
-        customerName: 'Bright Star',
-        status: 'COMPLETED',
-        createdAt: new Date().toISOString(),
-        items: [
-            { id: 'i13', productName: 'Burger', quantity: 3, isPrepared: true, category: 'Quick Bites' },
-            { id: 'i14', productName: 'Pizza', quantity: 3, isPrepared: true, category: 'Quick Bites' },
-            { id: 'i15', productName: 'Coffee', quantity: 3, isPrepared: true, category: 'Drink' },
-        ],
-    },
-    {
-        id: 'ko-6',
-        orderNumber: '#2210',
-        customerName: 'Happy Dolphin',
-        status: 'TO_COOK',
-        createdAt: new Date().toISOString(),
-        items: [
-            { id: 'i16', productName: 'Pizza', quantity: 2, isPrepared: false, category: 'Quick Bites' },
-            { id: 'i17', productName: 'Coffee', quantity: 4, isPrepared: false, category: 'Drink' },
-        ],
-    },
-    {
-        id: 'ko-7',
-        orderNumber: '#2211',
-        customerName: 'Quick Fox',
-        status: 'TO_COOK',
-        createdAt: new Date().toISOString(),
-        items: [
-            { id: 'i18', productName: 'Burger', quantity: 1, isPrepared: false, category: 'Quick Bites' },
-            { id: 'i19', productName: 'Water', quantity: 2, isPrepared: false, category: 'Drink' },
-        ],
-    },
-    {
-        id: 'ko-8',
-        orderNumber: '#2212',
-        customerName: 'Lazy Bear',
-        status: 'PREPARING',
-        createdAt: new Date().toISOString(),
-        items: [
-            { id: 'i20', productName: 'Pizza', quantity: 2, isPrepared: true, category: 'Quick Bites' },
-            { id: 'i21', productName: 'Coffee', quantity: 1, isPrepared: false, category: 'Drink' },
-        ],
-    },
-    {
-        id: 'ko-9',
-        orderNumber: '#2213',
-        customerName: 'Wise Owl',
-        status: 'PREPARING',
-        createdAt: new Date().toISOString(),
-        items: [
-            { id: 'i22', productName: 'Burger', quantity: 2, isPrepared: false, category: 'Quick Bites' },
-            { id: 'i23', productName: 'Pizza', quantity: 1, isPrepared: true, category: 'Quick Bites' },
-        ],
-    },
-    {
-        id: 'ko-10',
-        orderNumber: '#2214',
-        customerName: 'Silent Tiger',
-        status: 'COMPLETED',
-        createdAt: new Date().toISOString(),
-        items: [
-            { id: 'i24', productName: 'Coffee', quantity: 3, isPrepared: true, category: 'Drink' },
-            { id: 'i25', productName: 'Water', quantity: 2, isPrepared: true, category: 'Drink' },
-        ],
-    },
-    {
-        id: 'ko-11',
-        orderNumber: '#2215',
-        customerName: 'Brave Lion',
-        status: 'TO_COOK',
-        createdAt: new Date().toISOString(),
-        items: [
-            { id: 'i26', productName: 'Burger', quantity: 4, isPrepared: false, category: 'Quick Bites' },
-            { id: 'i27', productName: 'Coffee', quantity: 4, isPrepared: false, category: 'Drink' },
-        ],
-    },
-    {
-        id: 'ko-12',
-        orderNumber: '#2216',
-        customerName: 'Gentle Panda',
-        status: 'COMPLETED',
-        createdAt: new Date().toISOString(),
-        items: [
-            { id: 'i28', productName: 'Pizza', quantity: 2, isPrepared: true, category: 'Quick Bites' },
-            { id: 'i29', productName: 'Water', quantity: 3, isPrepared: true, category: 'Drink' },
-        ],
-    },
-];
 
 // Get unique products and categories from orders
 const getUniqueProducts = (orders: KitchenOrder[]) => {
@@ -183,8 +31,11 @@ const getUniqueCategories = (orders: KitchenOrder[]) => {
 
 const KitchenDisplay = () => {
     const navigate = useNavigate();
-    const [orders, setOrders] = useState<KitchenOrder[]>(mockOrders);
-    const [activeTab, setActiveTab] = useState<'ALL' | OrderStatus>('ALL');
+    const [orders, setOrders] = useState<KitchenOrder[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isSocketConnected, setIsSocketConnected] = useState(false);
+    const [activeTab, setActiveTab] = useState<'ALL' | KitchenOrderStatus>('ALL');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -199,15 +50,81 @@ const KitchenDisplay = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Calculate orders per page based on screen size - increased values
+    // Fetch orders from backend
+    const fetchOrders = useCallback(async (showLoadingState = true) => {
+        if (showLoadingState) {
+            setIsLoading(true);
+        } else {
+            setIsRefreshing(true);
+        }
+
+        try {
+            const kitchenOrders = await getAllKitchenOrders();
+            setOrders(kitchenOrders);
+        } catch (error) {
+            console.error('Failed to fetch kitchen orders:', error);
+        }
+
+        setIsLoading(false);
+        setIsRefreshing(false);
+    }, []);
+
+    // Initial fetch
+    useEffect(() => {
+        fetchOrders();
+    }, [fetchOrders]);
+
+    // Socket.IO real-time updates
+    useEffect(() => {
+        const socket = getSocket();
+
+        const handleConnect = () => {
+            console.log('Kitchen socket connected');
+            setIsSocketConnected(true);
+        };
+
+        const handleDisconnect = () => {
+            console.log('Kitchen socket disconnected');
+            setIsSocketConnected(false);
+        };
+
+        const handleNewOrder = () => {
+            console.log('New order received - refreshing kitchen display');
+            fetchOrders(false);
+        };
+
+        const handleOrderUpdate = () => {
+            console.log('Order updated - refreshing kitchen display');
+            fetchOrders(false);
+        };
+
+        // Set initial connection state
+        setIsSocketConnected(socket.connected);
+
+        // Register event listeners
+        socket.on('connect', handleConnect);
+        socket.on('disconnect', handleDisconnect);
+        socket.on('kitchen:newOrder', handleNewOrder);
+        socket.on('kitchen:orderUpdate', handleOrderUpdate);
+
+        // Cleanup on unmount
+        return () => {
+            socket.off('connect', handleConnect);
+            socket.off('disconnect', handleDisconnect);
+            socket.off('kitchen:newOrder', handleNewOrder);
+            socket.off('kitchen:orderUpdate', handleOrderUpdate);
+        };
+    }, [fetchOrders]);
+
+    // Calculate orders per page based on screen size
     const getOrdersPerPage = () => {
-        if (windowWidth >= 1600) return 20;  // Very large desktop
-        if (windowWidth >= 1400) return 16;  // Large desktop
-        if (windowWidth >= 1200) return 12;  // Desktop
-        if (windowWidth >= 1024) return 9;   // Tablet landscape
-        if (windowWidth >= 768) return 6;    // Tablet portrait
-        if (windowWidth >= 480) return 4;    // Mobile landscape
-        return 3;                             // Mobile portrait
+        if (windowWidth >= 1600) return 20;
+        if (windowWidth >= 1400) return 16;
+        if (windowWidth >= 1200) return 12;
+        if (windowWidth >= 1024) return 9;
+        if (windowWidth >= 768) return 6;
+        if (windowWidth >= 480) return 4;
+        return 3;
     };
 
     const ordersPerPage = getOrdersPerPage();
@@ -266,7 +183,7 @@ const KitchenDisplay = () => {
     const preparingCount = orders.filter(o => o.status === 'PREPARING').length;
     const completedCount = orders.filter(o => o.status === 'COMPLETED').length;
 
-    // Toggle item prepared status
+    // Toggle item prepared status (local only - backend doesn't track per-item)
     const toggleItemPrepared = (orderId: string, itemId: string, e: React.MouseEvent) => {
         e.stopPropagation();
         setOrders(prev => prev.map(order =>
@@ -281,17 +198,21 @@ const KitchenDisplay = () => {
         ));
     };
 
-    // Advance order to next status
-    const advanceOrderStatus = (orderId: string) => {
-        setOrders(prev => prev.map(order => {
-            if (order.id !== orderId) return order;
+    // Advance order to next status via API
+    const handleAdvanceOrderStatus = async (orderId: string) => {
+        const order = orders.find(o => o.id === orderId);
+        if (!order) return;
 
-            let newStatus: OrderStatus = order.status;
-            if (order.status === 'TO_COOK') newStatus = 'PREPARING';
-            else if (order.status === 'PREPARING') newStatus = 'COMPLETED';
+        // Don't advance completed orders
+        if (order.status === 'COMPLETED') return;
 
-            return { ...order, status: newStatus };
-        }));
+        const updatedOrder = await advanceOrderStatus(order);
+        if (updatedOrder) {
+            // Socket will trigger refresh, but update locally for immediate feedback
+            setOrders(prev => prev.map(o =>
+                o.id === orderId ? updatedOrder : o
+            ));
+        }
     };
 
     // Clear filters
@@ -316,6 +237,21 @@ const KitchenDisplay = () => {
                     </button>
 
                     <h1 className="kitchen-display__title">Kitchen Display</h1>
+
+                    {/* Connection Status */}
+                    <div className={`kitchen-display__connection ${isSocketConnected ? 'kitchen-display__connection--connected' : ''}`}>
+                        {isSocketConnected ? <Wifi size={16} /> : <WifiOff size={16} />}
+                    </div>
+
+                    {/* Refresh Button */}
+                    <button
+                        className={`kitchen-display__refresh ${isRefreshing ? 'kitchen-display__refresh--spinning' : ''}`}
+                        onClick={() => fetchOrders(false)}
+                        disabled={isRefreshing}
+                        title="Refresh orders"
+                    >
+                        <RefreshCw size={18} />
+                    </button>
 
                     {/* Status Tabs */}
                     <div className="kitchen-display__tabs">
@@ -358,7 +294,7 @@ const KitchenDisplay = () => {
 
                     {/* Pagination */}
                     <div className="kitchen-display__pagination">
-                        <span>{((currentPage - 1) * ordersPerPage) + 1}-{Math.min(currentPage * ordersPerPage, filteredOrders.length)} of {filteredOrders.length}</span>
+                        <span>{filteredOrders.length > 0 ? ((currentPage - 1) * ordersPerPage) + 1 : 0}-{Math.min(currentPage * ordersPerPage, filteredOrders.length)} of {filteredOrders.length}</span>
                         <button
                             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                             disabled={currentPage === 1}
@@ -436,22 +372,30 @@ const KitchenDisplay = () => {
 
                     {/* Order Tickets Grid */}
                     <div className="kitchen-display__tickets">
-                        {paginatedOrders.length === 0 ? (
+                        {isLoading ? (
+                            <div className="kitchen-display__loading">
+                                <RefreshCw size={32} className="kitchen-display__loading-icon" />
+                                <span>Loading orders...</span>
+                            </div>
+                        ) : paginatedOrders.length === 0 ? (
                             <div className="kitchen-display__empty">
-                                No orders found
+                                {orders.length === 0 ? 'No orders in kitchen' : 'No orders match filters'}
                             </div>
                         ) : (
                             paginatedOrders.map(order => (
                                 <motion.div
                                     key={order.id}
                                     className={`kitchen-ticket kitchen-ticket--${order.status.toLowerCase().replace('_', '-')}`}
-                                    onClick={() => advanceOrderStatus(order.id)}
+                                    onClick={() => handleAdvanceOrderStatus(order.id)}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     layout
                                 >
                                     <div className="kitchen-ticket__header">
                                         <span className="kitchen-ticket__number">{order.orderNumber}</span>
+                                        {order.tableName && (
+                                            <span className="kitchen-ticket__table">{order.tableName}</span>
+                                        )}
                                     </div>
                                     <div className="kitchen-ticket__items">
                                         {order.items.map(item => (
@@ -467,6 +411,11 @@ const KitchenDisplay = () => {
                                     <div className="kitchen-ticket__customer">
                                         {order.customerName}
                                     </div>
+                                    {order.notes && (
+                                        <div className="kitchen-ticket__notes">
+                                            {order.notes}
+                                        </div>
+                                    )}
                                 </motion.div>
                             ))
                         )}

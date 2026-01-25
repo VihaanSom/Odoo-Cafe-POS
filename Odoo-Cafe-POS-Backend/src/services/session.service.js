@@ -4,7 +4,7 @@ const { MESSAGES } = require('../utils/constants');
 /**
  * Open a new POS session for a terminal
  */
-const openSession = async (terminalId) => {
+const openSession = async (terminalId, userId) => {
     // Check if terminal exists
     const terminal = await prisma.posTerminal.findUnique({
         where: { id: terminalId }
@@ -30,16 +30,22 @@ const openSession = async (terminalId) => {
         throw error;
     }
 
-    // Create new session
-    const session = await prisma.posSession.create({
-        data: {
-            terminalId,
-            totalSales: 0
-        },
-        include: {
-            terminal: true
-        }
-    });
+    // Create new session and link terminal to user in a transaction
+    const [session] = await prisma.$transaction([
+        prisma.posSession.create({
+            data: {
+                terminalId,
+                totalSales: 0
+            },
+            include: {
+                terminal: true
+            }
+        }),
+        prisma.posTerminal.update({
+            where: { id: terminalId },
+            data: { userId }
+        })
+    ]);
 
     return session;
 };
@@ -73,17 +79,23 @@ const closeSession = async (sessionId) => {
 
     const totalSales = salesAggregate._sum.totalAmount || 0;
 
-    // Close the session
-    const closedSession = await prisma.posSession.update({
-        where: { id: sessionId },
-        data: {
-            closedAt: new Date(),
-            totalSales
-        },
-        include: {
-            terminal: true
-        }
-    });
+    // Close the session and unlink terminal in a transaction
+    const [closedSession] = await prisma.$transaction([
+        prisma.posSession.update({
+            where: { id: sessionId },
+            data: {
+                closedAt: new Date(),
+                totalSales
+            },
+            include: {
+                terminal: true
+            }
+        }),
+        prisma.posTerminal.update({
+            where: { id: session.terminalId },
+            data: { userId: null }
+        })
+    ]);
 
     return closedSession;
 };
