@@ -5,22 +5,61 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, X, MoreVertical, Loader } from 'lucide-react';
+import { ArrowLeft, Plus, X, MoreVertical } from 'lucide-react';
 import { getTerminalsApi, createTerminalApi, getBranches, type Terminal } from '../../api/branches.api';
 import './TerminalSettings.css';
+
+interface PaymentMethods {
+    cash: boolean;
+    digital: boolean;
+    upi: boolean;
+    upiId?: string;
+}
 
 interface POSTerminal {
     id: string;
     name: string;
     lastOpen?: string;
     lastSell?: number;
-    paymentMethods: {
-        cash: boolean;
-        digital: boolean;
-        upi: boolean;
-        upiId?: string;
-    };
+    paymentMethods: PaymentMethods;
 }
+
+// LocalStorage key for payment methods
+const PAYMENT_METHODS_KEY = 'pos_terminal_payment_methods';
+
+// Default payment methods
+const defaultPaymentMethods: PaymentMethods = {
+    cash: true,
+    digital: true,
+    upi: false,
+    upiId: '',
+};
+
+// Load payment methods from localStorage for a terminal
+const loadPaymentMethods = (terminalId: string): PaymentMethods => {
+    try {
+        const saved = localStorage.getItem(PAYMENT_METHODS_KEY);
+        if (saved) {
+            const allMethods = JSON.parse(saved);
+            return allMethods[terminalId] || { ...defaultPaymentMethods };
+        }
+    } catch {
+        // Ignore parse errors
+    }
+    return { ...defaultPaymentMethods };
+};
+
+// Save payment methods to localStorage for a terminal
+const savePaymentMethods = (terminalId: string, methods: PaymentMethods): void => {
+    try {
+        const saved = localStorage.getItem(PAYMENT_METHODS_KEY);
+        const allMethods = saved ? JSON.parse(saved) : {};
+        allMethods[terminalId] = methods;
+        localStorage.setItem(PAYMENT_METHODS_KEY, JSON.stringify(allMethods));
+    } catch {
+        console.error('Failed to save payment methods');
+    }
+};
 
 // Map backend Terminal to POSTerminal for display
 const mapTerminalToPOS = (t: Terminal): POSTerminal => ({
@@ -28,12 +67,7 @@ const mapTerminalToPOS = (t: Terminal): POSTerminal => ({
     name: t.terminalName,
     lastOpen: t.createdAt,
     lastSell: undefined,
-    paymentMethods: {
-        cash: true,
-        digital: true,
-        upi: false,
-        upiId: '',
-    },
+    paymentMethods: loadPaymentMethods(t.id),
 });
 
 const TerminalSettings = () => {
@@ -76,21 +110,29 @@ const TerminalSettings = () => {
     }, [searchParams]);
 
     const handlePaymentChange = (field: 'cash' | 'digital' | 'upi', value: boolean) => {
-        // For now, payment methods are local only (not persisted to backend)
-        // Could be extended to save to backend if needed
-        setTerminals(prev => prev.map(t =>
-            t.id === selectedTerminalId
-                ? { ...t, paymentMethods: { ...t.paymentMethods, [field]: value } }
-                : t
-        ));
+        if (!selectedTerminalId) return;
+
+        setTerminals(prev => prev.map(t => {
+            if (t.id === selectedTerminalId) {
+                const updatedMethods = { ...t.paymentMethods, [field]: value };
+                savePaymentMethods(t.id, updatedMethods);
+                return { ...t, paymentMethods: updatedMethods };
+            }
+            return t;
+        }));
     };
 
     const handleUpiIdChange = (value: string) => {
-        setTerminals(prev => prev.map(t =>
-            t.id === selectedTerminalId
-                ? { ...t, paymentMethods: { ...t.paymentMethods, upiId: value } }
-                : t
-        ));
+        if (!selectedTerminalId) return;
+
+        setTerminals(prev => prev.map(t => {
+            if (t.id === selectedTerminalId) {
+                const updatedMethods = { ...t.paymentMethods, upiId: value };
+                savePaymentMethods(t.id, updatedMethods);
+                return { ...t, paymentMethods: updatedMethods };
+            }
+            return t;
+        }));
     };
 
     const handleCreateTerminal = async () => {
