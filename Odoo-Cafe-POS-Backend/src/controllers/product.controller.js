@@ -6,8 +6,8 @@ const productService = require('../services/product.service');
  */
 const create = async (req, res, next) => {
     try {
-        const { branchId, categoryId, name, price } = req.body;
-        
+        const { branchId, categoryId, name, price, description, barcode, taxRate, imageUrl, priceRules } = req.body;
+
         if (!branchId) {
             return res.status(400).json({ message: 'Branch ID is required' });
         }
@@ -17,8 +17,18 @@ const create = async (req, res, next) => {
         if (price === undefined || price === null) {
             return res.status(400).json({ message: 'Product price is required' });
         }
-        
-        const product = await productService.createProduct({ branchId, categoryId, name, price });
+
+        const product = await productService.createProduct({
+            branchId,
+            categoryId,
+            name,
+            price,
+            description,
+            barcode,
+            taxRate,
+            imageUrl,
+            priceRules
+        });
         res.status(201).json(product);
     } catch (error) {
         // Handle Prisma foreign key error (invalid branchId or categoryId)
@@ -50,11 +60,11 @@ const getAll = async (req, res, next) => {
 const getById = async (req, res, next) => {
     try {
         const product = await productService.getProductById(req.params.id);
-        
+
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
-        
+
         res.json(product);
     } catch (error) {
         if (error.code === 'P2023') {
@@ -74,9 +84,19 @@ const update = async (req, res, next) => {
         if (!existing) {
             return res.status(404).json({ message: 'Product not found' });
         }
-        
-        const { name, price, categoryId, isActive } = req.body;
-        const product = await productService.updateProduct(req.params.id, { name, price, categoryId, isActive });
+
+        const { name, price, categoryId, isActive, description, barcode, taxRate, imageUrl, priceRules } = req.body;
+        const product = await productService.updateProduct(req.params.id, {
+            name,
+            price,
+            categoryId,
+            isActive,
+            description,
+            barcode,
+            taxRate,
+            imageUrl,
+            priceRules
+        });
         res.json(product);
     } catch (error) {
         if (error.code === 'P2023' || error.code === 'P2025') {
@@ -99,7 +119,7 @@ const remove = async (req, res, next) => {
         if (!existing) {
             return res.status(404).json({ message: 'Product not found' });
         }
-        
+
         await productService.deleteProduct(req.params.id);
         res.status(204).send();
     } catch (error) {

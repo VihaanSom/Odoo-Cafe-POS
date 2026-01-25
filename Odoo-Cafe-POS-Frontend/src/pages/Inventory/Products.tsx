@@ -13,7 +13,6 @@ interface Product {
     name: string;
     category: string;
     price: number;
-    cost: number;
     barcode?: string;
     icon: string;
     isActive: boolean;
@@ -34,16 +33,16 @@ const mockCategories: Category[] = [
 ];
 
 const mockProducts: Product[] = [
-    { id: 'prod-1', name: 'Crispy Chicken Wings', category: 'cat-1', price: 249, cost: 120, icon: '🍗', isActive: true },
-    { id: 'prod-2', name: 'Garlic Bread', category: 'cat-1', price: 149, cost: 50, icon: '🥖', isActive: true },
-    { id: 'prod-3', name: 'Caesar Salad', category: 'cat-1', price: 199, cost: 80, icon: '🥗', isActive: true },
-    { id: 'prod-4', name: 'Grilled Salmon', category: 'cat-2', price: 549, cost: 280, icon: '🐟', isActive: true },
-    { id: 'prod-5', name: 'Butter Chicken', category: 'cat-2', price: 399, cost: 180, icon: '🍛', isActive: true },
-    { id: 'prod-6', name: 'Margherita Pizza', category: 'cat-2', price: 349, cost: 140, icon: '🍕', isActive: true },
-    { id: 'prod-7', name: 'Virgin Mojito', category: 'cat-3', price: 149, cost: 40, icon: '🍹', isActive: true },
-    { id: 'prod-8', name: 'Cold Coffee', category: 'cat-3', price: 149, cost: 45, icon: '☕', isActive: true },
-    { id: 'prod-9', name: 'Chocolate Brownie', category: 'cat-4', price: 179, cost: 70, icon: '🍫', isActive: true },
-    { id: 'prod-10', name: 'French Fries', category: 'cat-5', price: 129, cost: 40, icon: '🍟', isActive: true },
+    { id: 'prod-1', name: 'Crispy Chicken Wings', category: 'cat-1', price: 249, icon: '🍗', isActive: true },
+    { id: 'prod-2', name: 'Garlic Bread', category: 'cat-1', price: 149, icon: '🥖', isActive: true },
+    { id: 'prod-3', name: 'Caesar Salad', category: 'cat-1', price: 199, icon: '🥗', isActive: true },
+    { id: 'prod-4', name: 'Grilled Salmon', category: 'cat-2', price: 549, icon: '🐟', isActive: true },
+    { id: 'prod-5', name: 'Butter Chicken', category: 'cat-2', price: 399, icon: '🍛', isActive: true },
+    { id: 'prod-6', name: 'Margherita Pizza', category: 'cat-2', price: 349, icon: '🍕', isActive: true },
+    { id: 'prod-7', name: 'Virgin Mojito', category: 'cat-3', price: 149, icon: '🍹', isActive: true },
+    { id: 'prod-8', name: 'Cold Coffee', category: 'cat-3', price: 149, icon: '☕', isActive: true },
+    { id: 'prod-9', name: 'Chocolate Brownie', category: 'cat-4', price: 179, icon: '🍫', isActive: true },
+    { id: 'prod-10', name: 'French Fries', category: 'cat-5', price: 129, icon: '🍟', isActive: true },
 ];
 
 const Products = () => {
@@ -55,7 +54,6 @@ const Products = () => {
         name: '',
         category: '',
         price: '',
-        cost: '',
         barcode: '',
     });
 
@@ -74,7 +72,7 @@ const Products = () => {
 
     const handleNewClick = () => {
         setEditingProduct(null);
-        setFormData({ name: '', category: '', price: '', cost: '', barcode: '' });
+        setFormData({ name: '', category: '', price: '', barcode: '' });
         setIsModalOpen(true);
     };
 
@@ -84,7 +82,6 @@ const Products = () => {
             name: product.name,
             category: product.category,
             price: product.price.toString(),
-            cost: product.cost.toString(),
             barcode: product.barcode || '',
         });
         setIsModalOpen(true);
@@ -109,7 +106,7 @@ const Products = () => {
             // Update existing
             setProducts(products.map(p =>
                 p.id === editingProduct.id
-                    ? { ...p, name: formData.name, category: formData.category, price: parseFloat(formData.price), cost: parseFloat(formData.cost), barcode: formData.barcode }
+                    ? { ...p, name: formData.name, category: formData.category, price: parseFloat(formData.price), barcode: formData.barcode }
                     : p
             ));
         } else {
@@ -119,7 +116,6 @@ const Products = () => {
                 name: formData.name,
                 category: formData.category,
                 price: parseFloat(formData.price),
-                cost: parseFloat(formData.cost),
                 barcode: formData.barcode,
                 icon: '📦',
                 isActive: true,
@@ -146,7 +142,6 @@ const Products = () => {
                             <th>Name</th>
                             <th>Category</th>
                             <th>Price</th>
-                            <th>Cost</th>
                             <th>Status</th>
                             <th style={{ width: '100px' }}>Actions</th>
                         </tr>
@@ -154,7 +149,7 @@ const Products = () => {
                     <tbody>
                         {filteredProducts.length === 0 ? (
                             <tr>
-                                <td colSpan={7}>
+                                <td colSpan={6}>
                                     <div className="admin-empty">
                                         <div className="admin-empty__icon"><Package size={48} /></div>
                                         <p className="admin-empty__text">No products found</p>
@@ -175,7 +170,6 @@ const Products = () => {
                                     <td><strong>{product.name}</strong></td>
                                     <td>{getCategoryName(product.category)}</td>
                                     <td>₹{product.price.toFixed(2)}</td>
-                                    <td>₹{product.cost.toFixed(2)}</td>
                                     <td>
                                         <span className={`admin-badge ${product.isActive ? 'admin-badge--success' : 'admin-badge--neutral'}`}>
                                             {product.isActive ? 'Active' : 'Inactive'}
@@ -260,29 +254,16 @@ const Products = () => {
                                         </select>
                                     </div>
 
-                                    <div className="admin-form__row">
-                                        <div className="admin-form__group">
-                                            <label className="admin-form__label">Price (₹)</label>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                className="admin-form__input"
-                                                value={formData.price}
-                                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                                required
-                                            />
-                                        </div>
-                                        <div className="admin-form__group">
-                                            <label className="admin-form__label">Cost (₹)</label>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                className="admin-form__input"
-                                                value={formData.cost}
-                                                onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                                                required
-                                            />
-                                        </div>
+                                    <div className="admin-form__group">
+                                        <label className="admin-form__label">Price (₹)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className="admin-form__input"
+                                            value={formData.price}
+                                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                            required
+                                        />
                                     </div>
 
                                     <div className="admin-form__group">

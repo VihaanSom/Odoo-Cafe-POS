@@ -28,6 +28,7 @@ const ProductForm = () => {
 
     const [activeTab, setActiveTab] = useState<TabType>('general');
     const [categories, setCategories] = useState<Category[]>([]);
+    const [branches, setBranches] = useState<any[]>([]); // To get branchId
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -36,7 +37,6 @@ const ProductForm = () => {
         name: '',
         categoryId: '',
         price: '',
-        cost: '',
         barcode: '',
         taxes: 'gst_5',
         description: '',
@@ -55,6 +55,16 @@ const ProductForm = () => {
             const categoriesData = await getCategories();
             setCategories(categoriesData);
 
+            // Fetch branches to get an ID for new products
+            try {
+                // Assuming getBranches exists in branches.api.ts and is exported
+                const { getBranches } = await import('../../api/branches.api');
+                const branchesData = await getBranches();
+                setBranches(branchesData);
+            } catch (e) {
+                console.error("Failed to load branches", e);
+            }
+
             if (isEditing && productId) {
                 setIsLoading(true);
                 const product = await getProductById(productId);
@@ -63,7 +73,6 @@ const ProductForm = () => {
                         name: product.name,
                         categoryId: product.categoryId,
                         price: product.price.toString(),
-                        cost: product.cost?.toString() || '',
                         barcode: product.barcode || '',
                         taxes: product.taxes,
                         description: product.description || '',
@@ -106,11 +115,14 @@ const ProductForm = () => {
 
         setIsSaving(true);
 
+        let branchId = branches.length > 0 ? branches[0].id : undefined;
+        // If editing, we might want to keep original branchId, but for now we rely on backend or existing
+
         const productData: Omit<Product, 'id'> = {
             name: formData.name,
             categoryId: formData.categoryId,
+            branchId: branchId,
             price: parseFloat(formData.price),
-            cost: parseFloat(formData.cost) || 0,
             barcode: formData.barcode,
             taxes: formData.taxes,
             description: formData.description,
@@ -123,6 +135,11 @@ const ProductForm = () => {
         if (isEditing && productId) {
             await updateProduct(productId, productData);
         } else {
+            if (!branchId) {
+                alert("No branch found. Cannot create product.");
+                setIsSaving(false);
+                return;
+            }
             await createProduct(productData);
         }
 
@@ -265,53 +282,55 @@ const ProductForm = () => {
                                     placeholder="0.00"
                                 />
                             </div>
+                            <div className="product-form__row">
+                                <div className="product-form__group">
+                                    <label className="product-form__label">Sale Price (₹) *</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        className="product-form__input"
+                                        value={formData.price}
+                                        onChange={(e) => handleInputChange('price', e.target.value)}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="product-form__row">
+                                <div className="product-form__group">
+                                    <label className="product-form__label">Customer Taxes</label>
+                                    <select
+                                        className="product-form__select"
+                                        value={formData.taxes}
+                                        onChange={(e) => handleInputChange('taxes', e.target.value)}
+                                    >
+                                        {TAX_OPTIONS.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="product-form__group">
+                                    <label className="product-form__label">Barcode</label>
+                                    <input
+                                        type="text"
+                                        className="product-form__input"
+                                        value={formData.barcode}
+                                        onChange={(e) => handleInputChange('barcode', e.target.value)}
+                                        placeholder="Scan or enter barcode"
+                                    />
+                                </div>
+                            </div>
+
                             <div className="product-form__group">
-                                <label className="product-form__label">Cost Price (₹)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    className="product-form__input"
-                                    value={formData.cost}
-                                    onChange={(e) => handleInputChange('cost', e.target.value)}
-                                    placeholder="0.00"
+                                <label className="product-form__label">Description</label>
+                                <textarea
+                                    className="product-form__textarea"
+                                    value={formData.description}
+                                    onChange={(e) => handleInputChange('description', e.target.value)}
+                                    placeholder="Optional product description..."
+                                    rows={3}
                                 />
                             </div>
-                        </div>
-
-                        <div className="product-form__row">
-                            <div className="product-form__group">
-                                <label className="product-form__label">Customer Taxes</label>
-                                <select
-                                    className="product-form__select"
-                                    value={formData.taxes}
-                                    onChange={(e) => handleInputChange('taxes', e.target.value)}
-                                >
-                                    {TAX_OPTIONS.map(opt => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="product-form__group">
-                                <label className="product-form__label">Barcode</label>
-                                <input
-                                    type="text"
-                                    className="product-form__input"
-                                    value={formData.barcode}
-                                    onChange={(e) => handleInputChange('barcode', e.target.value)}
-                                    placeholder="Scan or enter barcode"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="product-form__group">
-                            <label className="product-form__label">Description</label>
-                            <textarea
-                                className="product-form__textarea"
-                                value={formData.description}
-                                onChange={(e) => handleInputChange('description', e.target.value)}
-                                placeholder="Optional product description..."
-                                rows={3}
-                            />
                         </div>
                     </motion.div>
                 )}

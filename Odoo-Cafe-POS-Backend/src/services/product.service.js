@@ -3,14 +3,19 @@ const prisma = require('../config/prisma');
 /**
  * Create a new product
  */
-const createProduct = async ({ branchId, categoryId, name, price }) => {
+const createProduct = async ({ branchId, categoryId, name, price, description, barcode, taxRate, imageUrl, priceRules }) => {
     return prisma.product.create({
-        data: { 
-            branchId, 
-            categoryId, 
-            name, 
+        data: {
+            branchId,
+            categoryId,
+            name,
             price,
-            isActive: true 
+            description,
+            barcode,
+            taxRate,
+            imageUrl,
+            priceRules,
+            isActive: true
         },
         include: { category: true, branch: true }
     });
@@ -24,7 +29,7 @@ const getAllProducts = async ({ branchId, categoryId, isActive }) => {
     if (branchId) where.branchId = branchId;
     if (categoryId) where.categoryId = categoryId;
     if (isActive !== undefined) where.isActive = isActive === 'true';
-    
+
     return prisma.product.findMany({
         where,
         include: { category: true, branch: true },
@@ -45,13 +50,18 @@ const getProductById = async (id) => {
 /**
  * Update product
  */
-const updateProduct = async (id, { name, price, categoryId, isActive }) => {
+const updateProduct = async (id, { name, price, categoryId, isActive, description, barcode, taxRate, imageUrl, priceRules }) => {
     const data = {};
     if (name !== undefined) data.name = name;
     if (price !== undefined) data.price = price;
     if (categoryId !== undefined) data.categoryId = categoryId;
     if (isActive !== undefined) data.isActive = isActive;
-    
+    if (description !== undefined) data.description = description;
+    if (barcode !== undefined) data.barcode = barcode;
+    if (taxRate !== undefined) data.taxRate = taxRate;
+    if (imageUrl !== undefined) data.imageUrl = imageUrl;
+    if (priceRules !== undefined) data.priceRules = priceRules;
+
     return prisma.product.update({
         where: { id },
         data,
