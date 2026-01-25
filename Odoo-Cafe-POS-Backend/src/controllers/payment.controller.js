@@ -19,7 +19,18 @@ const generateReceipt = async (req, res, next) => {
     }
 };
 
+const getAll = async (req, res, next) => {
+    try {
+        const { method, status, orderNumber } = req.query;
+        const payments = await paymentService.getAllPayments({ method, status, orderNumber });
+        res.json(payments);
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     processPayment,
-    generateReceipt
+    generateReceipt,
+    getAll
 };

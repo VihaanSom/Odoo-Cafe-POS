@@ -9,6 +9,9 @@ router.use(authMiddleware);
 // Process Payment
 router.post('/', paymentController.processPayment);
 
+// Get All Payments
+router.get('/', paymentController.getAll);
+
 // Generate Receipt
 router.post('/orders/:id/receipt', paymentController.generateReceipt);
 

@@ -143,7 +143,41 @@ const generateReceipt = async (orderId) => {
     return receiptData;
 };
 
+/**
+ * Get all payments
+ */
+const getAllPayments = async (query = {}) => {
+    const { method, status, orderNumber } = query;
+    const where = {};
+
+    if (method && method !== 'ALL') where.method = method;
+    if (status) where.status = status;
+    if (orderNumber) {
+        where.order = {
+            receipts: {
+                some: {
+                    receiptNumber: { contains: orderNumber, mode: 'insensitive' }
+                }
+            }
+        };
+    }
+
+    return prisma.payment.findMany({
+        where,
+        include: {
+            order: {
+                include: {
+                    receipts: true,
+                    customer: true
+                }
+            }
+        },
+        orderBy: { createdAt: 'desc' }
+    });
+};
+
 module.exports = {
     processPayment,
-    generateReceipt
+    generateReceipt,
+    getAllPayments
 };

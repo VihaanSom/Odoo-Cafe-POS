@@ -2,38 +2,34 @@
  * Payments Management Page
  * View all payment transactions with filter by payment method
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CreditCard } from 'lucide-react';
 import AdminPageLayout from '../../components/admin/AdminPageLayout';
-
-interface Payment {
-    id: string;
-    orderId: string;
-    orderNumber: string;
-    method: 'CASH' | 'UPI' | 'CARD';
-    amount: number;
-    transactionRef?: string;
-    status: 'COMPLETED' | 'PENDING' | 'FAILED';
-    createdAt: string;
-}
+import { getPaymentsApi, type PaymentRecord as Payment } from '../../api/payments.api';
 
 type FilterType = 'ALL' | 'CASH' | 'UPI' | 'CARD';
 
-// Mock data
-const mockPayments: Payment[] = [
-    { id: 'pay-1', orderId: 'order-1001', orderNumber: '#1001', method: 'UPI', amount: 1188.60, transactionRef: 'UPI-78945612', status: 'COMPLETED', createdAt: '2026-01-24T20:32:00' },
-    { id: 'pay-2', orderId: 'order-1002', orderNumber: '#1002', method: 'CARD', amount: 785.40, transactionRef: 'TXN-456123789', status: 'COMPLETED', createdAt: '2026-01-24T19:48:00' },
-    { id: 'pay-3', orderId: 'order-1003', orderNumber: '#1003', method: 'CASH', amount: 1003.80, status: 'COMPLETED', createdAt: '2026-01-24T18:25:00' },
-    { id: 'pay-4', orderId: 'order-1005', orderNumber: '#1005', method: 'UPI', amount: 450.00, transactionRef: 'UPI-11223344', status: 'COMPLETED', createdAt: '2026-01-24T16:10:00' },
-    { id: 'pay-5', orderId: 'order-1006', orderNumber: '#1006', method: 'CARD', amount: 875.25, transactionRef: 'TXN-987654321', status: 'COMPLETED', createdAt: '2026-01-24T15:45:00' },
-    { id: 'pay-6', orderId: 'order-1007', orderNumber: '#1007', method: 'CASH', amount: 299.00, status: 'COMPLETED', createdAt: '2026-01-24T14:30:00' },
-];
-
 const Payments = () => {
-    const [payments] = useState<Payment[]>(mockPayments);
+    const [payments, setPayments] = useState<Payment[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
+
+    useEffect(() => {
+        const fetchPayments = async () => {
+            setIsLoading(true);
+            try {
+                const data = await getPaymentsApi();
+                setPayments(data);
+            } catch (error) {
+                console.error('Error fetching payments:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchPayments();
+    }, []);
 
     // Apply filter and search
     const filteredPayments = payments.filter(payment => {
@@ -150,7 +146,15 @@ const Payments = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredPayments.length === 0 ? (
+                        {isLoading ? (
+                            <tr>
+                                <td colSpan={6}>
+                                    <div className="admin-empty">
+                                        <p className="admin-empty__text">Loading payments...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : filteredPayments.length === 0 ? (
                             <tr>
                                 <td colSpan={6}>
                                     <div className="admin-empty">
