@@ -89,6 +89,13 @@ const Categories = () => {
 
     const handleDeleteClick = (categoryId: string, e: React.MouseEvent) => {
         e.stopPropagation();
+        const category = categories.find(c => c.id === categoryId);
+        
+        if (category && category.productCount > 0) {
+            alert(`Cannot delete "${category.name}". It has ${category.productCount} product(s). Please reassign or delete them first.`);
+            return;
+        }
+        
         setDeleteId(categoryId);
         setConfirmOpen(true);
     };
