@@ -81,6 +81,19 @@ const updateCategory = async (id, { name }) => {
  * Delete category
  */
 const deleteCategory = async (id) => {
+    // Check if category has products
+    const productCount = await prisma.product.count({
+        where: { categoryId: id }
+    });
+    
+    if (productCount > 0) {
+        const error = new Error(
+            `Cannot delete category. ${productCount} product(s) are assigned to this category. Please reassign or delete them first.`
+        );
+        error.statusCode = 400;
+        throw error;
+    }
+    
     return prisma.category.delete({
         where: { id }
     });

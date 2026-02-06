@@ -101,8 +101,18 @@ const remove = async (req, res, next) => {
         await categoryService.deleteCategory(req.params.id);
         res.status(204).send();
     } catch (error) {
+        // Handle custom error from service
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
+        // Handle Prisma errors
         if (error.code === 'P2023' || error.code === 'P2025') {
             return res.status(404).json({ message: 'Category not found' });
+        }
+        if (error.code === 'P2003') {
+            return res.status(400).json({ 
+                message: 'Cannot delete category with existing products' 
+            });
         }
         next(error);
     }
