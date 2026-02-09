@@ -3,7 +3,7 @@
  * Handles image uploads to Azure Blob Storage
  */
 
-const API_BASE_URL = 'http://localhost:5000/api';
+import { API_BASE_URL } from '../config/api.config';
 
 /**
  * Get auth token from localStorage

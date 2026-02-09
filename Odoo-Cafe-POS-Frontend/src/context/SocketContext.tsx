@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { SOCKET_URL } from '../config/api.config';
 
 interface SocketContextType {
     socket: Socket | null;
@@ -7,10 +8,6 @@ interface SocketContextType {
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
-
-// Use same URL as API but base (without /api)
-// Assuming API_BASE_URL is 'http://localhost:5000/api'
-const SOCKET_URL = 'http://localhost:5000';
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [socket, setSocket] = useState<Socket | null>(null);

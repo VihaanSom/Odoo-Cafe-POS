@@ -3,7 +3,8 @@
  * Connects to backend for CRUD, uses localStorage for icons and ordering
  */
 
-const API_BASE_URL = 'http://localhost:5000/api';
+import { API_BASE_URL } from '../config/api.config';
+
 const CATEGORY_METADATA_KEY = 'pos_category_metadata';
 
 // Backend response type
@@ -64,16 +65,16 @@ const getProductCounts = async (): Promise<Record<string, number>> => {
     try {
         const response = await fetch(`${API_BASE_URL}/products`);
         if (!response.ok) return {};
-        
+
         const products = await response.json();
         const counts: Record<string, number> = {};
-        
+
         for (const product of products) {
             if (product.categoryId) {
                 counts[product.categoryId] = (counts[product.categoryId] || 0) + 1;
             }
         }
-        
+
         return counts;
     } catch {
         return {};
@@ -104,19 +105,19 @@ const enrichCategories = (
  */
 export const getCategories = async (branchId?: string): Promise<Category[]> => {
     try {
-        const url = branchId 
+        const url = branchId
             ? `${API_BASE_URL}/categories?branchId=${branchId}`
             : `${API_BASE_URL}/categories`;
-            
+
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error('Failed to fetch categories');
         }
-        
+
         const backendCategories: BackendCategory[] = await response.json();
         const metadata = getMetadata();
         const productCounts = await getProductCounts();
-        
+
         return enrichCategories(backendCategories, metadata, productCounts);
     } catch (error) {
         console.error('Error fetching categories:', error);
@@ -135,11 +136,11 @@ export const getCategoryById = async (categoryId: string): Promise<Category | nu
             if (response.status === 404) return null;
             throw new Error('Failed to fetch category');
         }
-        
+
         const backendCategory: BackendCategory = await response.json();
         const metadata = getMetadata();
         const productCounts = await getProductCounts();
-        
+
         const enriched = enrichCategories([backendCategory], metadata, productCounts);
         return enriched[0] || null;
     } catch (error) {
@@ -170,12 +171,12 @@ export const createCategory = async (
         }
 
         const backendCategory: BackendCategory = await response.json();
-        
+
         // Save icon metadata
         const metadata = getMetadata();
         const existingOrders = Object.values(metadata).map(m => m.order);
         const maxOrder = existingOrders.length > 0 ? Math.max(...existingOrders) : 0;
-        
+
         metadata[backendCategory.id] = {
             icon,
             order: maxOrder + 1,
@@ -274,14 +275,14 @@ export const deleteCategory = async (categoryId: string): Promise<{ success: boo
  */
 export const updateCategoryOrder = (categories: Category[]): void => {
     const metadata = getMetadata();
-    
+
     categories.forEach((cat, index) => {
         metadata[cat.id] = {
             icon: metadata[cat.id]?.icon || cat.icon || DEFAULT_ICON,
             order: index + 1,
         };
     });
-    
+
     saveMetadata(metadata);
 };
 

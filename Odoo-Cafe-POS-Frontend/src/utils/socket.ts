@@ -3,8 +3,7 @@
  * Provides real-time connection to backend
  */
 import { io, Socket } from 'socket.io-client';
-
-const SOCKET_URL = 'http://localhost:5000';
+import { SOCKET_URL } from '../config/api.config';
 
 let socket: Socket | null = null;
 

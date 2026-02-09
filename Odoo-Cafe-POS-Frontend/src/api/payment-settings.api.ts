@@ -3,7 +3,7 @@
  * Handles terminal-specific payment method toggles and UPI ID
  */
 
-const API_BASE_URL = 'http://localhost:5000/api';
+import { API_BASE_URL } from '../config/api.config';
 
 const getAuthHeaders = (): HeadersInit => {
     const token = localStorage.getItem('pos_auth_token');

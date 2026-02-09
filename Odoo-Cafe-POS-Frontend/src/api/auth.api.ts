@@ -3,7 +3,7 @@
  * Connects to the Express backend at /api/auth
  */
 
-const API_BASE_URL = 'http://localhost:5000/api';
+import { API_BASE_URL } from '../config/api.config';
 
 export interface LoginCredentials {
     email: string;
@@ -32,7 +32,6 @@ export interface AuthResponse {
     error?: string;
 }
 
-const API_URL = 'http://localhost:5000/api';
 
 /**
  * Login API call
@@ -40,7 +39,7 @@ const API_URL = 'http://localhost:5000/api';
  */
 export const loginApi = async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
-        const response = await fetch(`${API_URL}/auth/login`, {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

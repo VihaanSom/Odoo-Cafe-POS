@@ -3,6 +3,8 @@
  * Persistent customer records from the backend
  */
 
+import { API_BASE_URL } from '../config/api.config';
+
 export interface Customer {
     id: string;
     name: string;
@@ -11,8 +13,6 @@ export interface Customer {
     totalSales: number;
     createdAt: string;
 }
-
-const API_BASE_URL = 'http://localhost:5000/api';
 
 const getAuthHeaders = (): HeadersInit => {
     const token = localStorage.getItem('pos_auth_token');

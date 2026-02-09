@@ -3,7 +3,7 @@
  * Connects to backend endpoints for floor management
  */
 
-const API_BASE_URL = 'http://localhost:5000/api';
+import { API_BASE_URL } from '../config/api.config';
 
 export interface Table {
     id: string;
@@ -35,15 +35,15 @@ export interface FloorResponse {
  */
 export const getFloors = async (branchId?: string): Promise<Floor[]> => {
     try {
-        const url = branchId 
+        const url = branchId
             ? `${API_BASE_URL}/floors?branchId=${branchId}`
             : `${API_BASE_URL}/floors`;
-            
+
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error('Failed to fetch floors');
         }
-        
+
         return await response.json();
     } catch (error) {
         console.error('Error fetching floors:', error);
@@ -62,7 +62,7 @@ export const getFloorById = async (floorId: string): Promise<Floor | null> => {
             if (response.status === 404) return null;
             throw new Error('Failed to fetch floor');
         }
-        
+
         return await response.json();
     } catch (error) {
         console.error('Error fetching floor:', error);
@@ -80,7 +80,7 @@ export const getFloorLayout = async (branchId: string): Promise<Floor[]> => {
         if (!response.ok) {
             throw new Error('Failed to fetch floor layout');
         }
-        
+
         return await response.json();
     } catch (error) {
         console.error('Error fetching floor layout:', error);
