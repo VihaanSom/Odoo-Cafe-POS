@@ -440,7 +440,7 @@ const AnalyticsDashboard = () => {
                                     paddingAngle={5}
                                     dataKey="value"
                                 >
-                                    {topCategories.map((entry, index) => (
+                                    {topCategories.map((_entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>

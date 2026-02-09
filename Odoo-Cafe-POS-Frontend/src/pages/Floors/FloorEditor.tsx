@@ -56,7 +56,7 @@ const FloorEditor = () => {
     // Load floors from backend on mount
     useEffect(() => {
         loadFloorsFromBackend();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const loadFloorsFromBackend = async () => {
@@ -64,11 +64,23 @@ const FloorEditor = () => {
         setError(null);
         try {
             const floorsData = await getFloors(BRANCH_ID);
-            setFloors(floorsData as Floor[]);
-            
+            // Map API Floor to local Floor format with TableItem
+            const mappedFloors: Floor[] = floorsData.map(floor => ({
+                id: floor.id,
+                name: floor.name,
+                tables: (floor.tables || []).map(table => ({
+                    id: table.id,
+                    tableNumber: String(table.tableNumber),
+                    seats: 4, // Default since API may not have this
+                    isActive: table.status !== 'RESERVED',
+                    resource: `Table ${table.tableNumber}`
+                }))
+            }));
+            setFloors(mappedFloors);
+
             // Set first floor as active if none selected
-            if (floorsData.length > 0 && !activeFloorId) {
-                setActiveFloorId(floorsData[0].id);
+            if (mappedFloors.length > 0 && !activeFloorId) {
+                setActiveFloorId(mappedFloors[0].id);
             }
         } catch (err) {
             console.error('Failed to load floors:', err);
@@ -83,7 +95,7 @@ const FloorEditor = () => {
     // Floor Management Handlers
     const handleCreateFloor = async () => {
         if (!floorFormData.name.trim()) return;
-        
+
         setLoading(true);
         setError(null);
         try {
@@ -106,7 +118,7 @@ const FloorEditor = () => {
 
     const handleUpdateFloor = async () => {
         if (!editingFloor || !floorFormData.name.trim()) return;
-        
+
         setLoading(true);
         setError(null);
         try {
@@ -129,7 +141,7 @@ const FloorEditor = () => {
 
     const handleDeleteFloor = async () => {
         if (!activeFloor) return;
-        
+
         setLoading(true);
         setError(null);
         try {
@@ -600,9 +612,9 @@ const FloorEditor = () => {
                                 <button className="admin-modal__close" onClick={() => setIsFloorModalOpen(false)}><X size={20} /></button>
                             </div>
 
-                            <form onSubmit={(e) => { 
-                                e.preventDefault(); 
-                                editingFloor ? handleUpdateFloor() : handleCreateFloor(); 
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                editingFloor ? handleUpdateFloor() : handleCreateFloor();
                             }}>
                                 <div className="admin-modal__body">
                                     {error && (
@@ -633,8 +645,8 @@ const FloorEditor = () => {
                                     >
                                         Cancel
                                     </button>
-                                    <button 
-                                        type="submit" 
+                                    <button
+                                        type="submit"
                                         className="admin-btn admin-btn--primary"
                                         disabled={loading || !floorFormData.name.trim()}
                                     >
