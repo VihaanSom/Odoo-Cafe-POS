@@ -38,8 +38,11 @@ jobs:
         working-directory: ./Odoo-Cafe-POS-Frontend
         run: npm run build
         env:
-          VITE_API_URL: "https://odoo-cafe-pos-backend.azurewebsites.net/api"
-          VITE_SOCKET_URL: "https://odoo-cafe-pos-backend.azurewebsites.net"
+          VITE_API_URL: "https://odoo-cafe-pos-backend-eqfsbvb5hxbwe4g7.centralindia-01.azurewebsites.net/api"
+          VITE_SOCKET_URL: "https://odoo-cafe-pos-backend-eqfsbvb5hxbwe4g7.centralindia-01.azurewebsites.net"
+
+      - name: Copy staticwebapp.config.json to dist
+        run: cp ./Odoo-Cafe-POS-Frontend/staticwebapp.config.json ./Odoo-Cafe-POS-Frontend/dist/
 
       - name: Install OIDC Client from Core Package
         run: npm install @actions/core@1.6.0 @actions/http-client
